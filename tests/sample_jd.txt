@@ -1,0 +1,7 @@
+Title: Software Engineer
+Join ExampleAI as a Software Engineer on our platform team.
+
+We are looking for an engineer with experience in Python, APIs, backend systems, automation, and internal tooling.
+Preferred qualifications include resume optimization, prompt engineering, and product thinking.
+You should be comfortable shipping pragmatic solutions, improving developer experience, and communicating clearly.
+

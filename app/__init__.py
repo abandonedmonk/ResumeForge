@@ -1,0 +1,2 @@
+"""ResumeForge application package."""
+

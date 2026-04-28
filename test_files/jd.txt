@@ -1,0 +1,16 @@
+We're hiring Forward Deployed Software Engineers at Sarvam.
+
+Sarvam is building India's full-stack sovereign AI platform - foundational models, speech, vision, and products on top of them for enterprises, consumers, and government. We're a small team, and every FDSE here is a generalist solving hard problems for customers — and rewriting how we solve them internally, with AI.
+
+Our engineers are in the room when problems are found — and don't leave until they're solved. They talk to customers, design solutions, and ship agents that run in production, sometimes all in the same week.
+
+The kind of people we're looking for:
+• High energy, high agency: they move fast, figure things out, and take ownership without being asked
+
+• AI-first builders: Solid understanding of LLMs, agents, RAG, evals, and the latest frameworks. Can design and build for scale, reliability, and real-world use  and have strong opinions on what actually matters
+
+• Follows the AI space obsessively: Fast learners who follow the space closely, experiment with new tools, and iterate quickly. 
+
+• You've shipped things you're proud of — at work, in open source, or on the side. Bonus if you've contributed to open-source projects or built something people actually use.
+
+We're hiring across multiple products: Samvaad (conversational AI agents for enterprise), ARYA (agentic backend infrastructure), API Dashboard (developer tooling and open-source integrations), and Content Studio (AI-native content workflows).

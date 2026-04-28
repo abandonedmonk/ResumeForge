@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+outputs/
+logs/
+.log/
+*.pdf
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+docs

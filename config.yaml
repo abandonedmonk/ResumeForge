@@ -1,0 +1,22 @@
+stage1_model: "groq"
+stage2_model: "groq"
+groq_reasoning_model: "llama-3.3-70b-versatile"
+groq_fast_model: "llama-3.1-8b-instant"
+openrouter_model: "mistralai/mistral-7b-instruct:free"
+openrouter_free_model: "mistralai/mistral-7b-instruct:free"
+copilot_model: "gpt-4o"
+default_skills_md: "skills.md"
+default_jd_txt: "test_files/jd.txt"
+default_projects_md: "test_files/Anshuman_Jena_Detailed_Projects.md"
+default_resume_tex: "test_files/template.tex"
+default_output_folder: "outputs"
+save_history: true
+open_browser_on_launch: true
+log_prompts: true
+log_dir: ".log"
+auto_name_pdf: true
+fallback_name: "Anshuman Jena Tailored Resume"
+keyword_coverage_threshold: 0.70
+max_retries_per_section: 2
+gradio_port: 7860
+preview_folder_name: ".preview"
