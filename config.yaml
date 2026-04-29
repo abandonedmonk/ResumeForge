@@ -1,13 +1,15 @@
 stage1_model: "groq"
 stage2_model: "groq"
 groq_reasoning_model: "llama-3.3-70b-versatile"
-groq_fast_model: "llama-3.1-8b-instant"
-openrouter_model: "mistralai/mistral-7b-instruct:free"
-openrouter_free_model: "mistralai/mistral-7b-instruct:free"
+groq_fast_model: "llama-3.3-70b-versatile"
+groq_fallback_fast_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
+openrouter_model: "openai/gpt-oss-20b:free"
+openrouter_free_model: "openai/gpt-oss-20b:free"
+groq_fallback_reasoning_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
 copilot_model: "gpt-4o"
 default_skills_md: "skills.md"
 default_jd_txt: "test_files/jd.txt"
-default_projects_md: "test_files/Anshuman_Jena_Detailed_Projects.md"
+default_projects_md: "inputs/project_profiles"
 default_resume_tex: "test_files/template.tex"
 default_output_folder: "outputs"
 save_history: true
@@ -20,3 +22,6 @@ keyword_coverage_threshold: 0.70
 max_retries_per_section: 2
 gradio_port: 7860
 preview_folder_name: ".preview"
+enrich_with_web_search: false
+ats_semantic_scoring: true
+gemini_semantic_model: "gemini-2.5-flash"

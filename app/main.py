@@ -38,14 +38,60 @@ def _safe_file_output(path_str: str | None):
     return None
 
 
+def _score_badge_html(summary: str, score_data: dict) -> str:
+    overall = int(score_data.get("overall", 0) or 0)
+    label = summary or "ATS score unavailable"
+    if overall >= 75:
+        bg = "#d1fae5"
+        fg = "#065f46"
+    elif overall >= 50:
+        bg = "#fef3c7"
+        fg = "#92400e"
+    else:
+        bg = "#fee2e2"
+        fg = "#991b1b"
+    return (
+        f"<div style='padding:14px 18px;border-radius:12px;background:{bg};color:{fg};"
+        f"font-weight:700;font-size:22px;text-align:center'>{label}</div>"
+    )
+
+
+def _ats_analysis_markdown(score_data: dict, skills_gap: dict) -> str:
+    if not score_data:
+        return "ATS analysis unavailable."
+    recommendations = score_data.get("recommendations", [])
+    return "\n".join(
+        [
+            f"## Overall ATS Match: {score_data.get('overall', 'N/A')}%",
+            "",
+            "### Sub-scores",
+            f"- Keyword Match: {score_data.get('keyword_match', {}).get('score', 'N/A')}%",
+            f"- Semantic Context: {score_data.get('semantic_context', {}).get('score', 'N/A')}%",
+            f"- Section Quality: {score_data.get('section_quality', {}).get('score', 'N/A')}%",
+            f"- Keyword Placement: {score_data.get('keyword_placement', {}).get('score', 'N/A')}%",
+            f"- Impact Metrics: {score_data.get('impact_metrics', {}).get('score', 'N/A')}%",
+            "",
+            "### Skills Gap",
+            f"- Missing Required: {', '.join(skills_gap.get('missing_required', [])) or 'None'}",
+            f"- Missing Nice-to-Have: {', '.join(skills_gap.get('missing_nice_to_have', [])) or 'None'}",
+            f"- Missing Enriched: {', '.join(skills_gap.get('missing_enriched', [])) or 'None'}",
+            "",
+            "### Recommendations",
+            *([f"- {item}" for item in recommendations] or ["- None"]),
+        ]
+    )
+
+
 def _run_resumeforge(
     output_folder: str,
     stage1_model: str,
     stage2_model: str,
+    enrich_with_web_search: bool,
 ):
     config = get_config()
     config["stage1_model"] = stage1_model
     config["stage2_model"] = stage2_model
+    config["enrich_with_web_search"] = enrich_with_web_search
     logs_before = {path.name for path in get_logs_dir().glob("*.log")}
     session_state: dict[str, Any] = {"status_updates": [], "errors": []}
     log_status(session_state, "Starting ResumeForge preview generation...")
@@ -71,6 +117,8 @@ def _run_resumeforge(
     status_text = "\n".join(final_state["status_updates"]) or "No status updates."
     errors_text = "\n".join(final_state["errors"]) or "No errors."
     return (
+        _score_badge_html(final_state.get("ats_score_summary", ""), final_state.get("ats_score", {})),
+        _ats_analysis_markdown(final_state.get("ats_score", {}), final_state.get("skills_gap", {})),
         final_state["changes_report_md"],
         final_state["final_tex"],
         _safe_file_output(final_state.get("final_pdf_path")),
@@ -91,10 +139,12 @@ def _build_run_log_content(final_state: dict, new_logs: list[Path]) -> str:
         f"Generated: {datetime.now().isoformat()}",
         f"Company: {final_state.get('jd_analysis', {}).get('company_name', 'Company')}",
         f"Role: {final_state.get('jd_analysis', {}).get('role_title', 'Role')}",
+        f"ATS Summary: {final_state.get('ats_score_summary', 'N/A')}",
         "",
         "Pipeline Configuration:",
         f"- Stage 1 (Selection): {config.get('stage1_model', 'unknown')} | Groq: {config.get('groq_reasoning_model', 'N/A')}",
         f"- Stage 2 (Writing): {config.get('stage2_model', 'unknown')} | Groq: {config.get('groq_fast_model', 'N/A')}",
+        f"- Company Enrichment: {config.get('enrich_with_web_search', False)}",
         "",
         "Status Updates:",
         *([f"- {line}" for line in final_state.get("status_updates", [])] or ["- None"]),
@@ -122,6 +172,14 @@ def _build_run_log_content(final_state: dict, new_logs: list[Path]) -> str:
         "",
         "Run Artifacts:",
         f"- Preview PDF: {final_state.get('final_pdf_path', '') or 'Not generated'}",
+        "",
+        "ATS Breakdown:",
+        f"- Overall: {final_state.get('ats_score', {}).get('overall', 'N/A')}",
+        f"- Keyword Match: {final_state.get('ats_score', {}).get('keyword_match', {}).get('score', 'N/A')}",
+        f"- Semantic Context: {final_state.get('ats_score', {}).get('semantic_context', {}).get('score', 'N/A')}",
+        f"- Section Quality: {final_state.get('ats_score', {}).get('section_quality', {}).get('score', 'N/A')}",
+        f"- Keyword Placement: {final_state.get('ats_score', {}).get('keyword_placement', {}).get('score', 'N/A')}",
+        f"- Impact Metrics: {final_state.get('ats_score', {}).get('impact_metrics', {}).get('score', 'N/A')}",
         "",
         "LLM Log Files:",
         *([f"- {path}" for path in new_logs] or ["- None"]),
@@ -204,11 +262,18 @@ def build_ui() -> gr.Blocks:
                     choices=["groq", "cohere", "openrouter", "copilot"],
                     value=config.get("stage2_model", "groq"),
                 )
+                enrich_toggle = gr.Checkbox(
+                    label="Enrich with web search",
+                    value=bool(config.get("enrich_with_web_search", False)),
+                )
                 gr.Markdown(f"Using root skill file: `{resolve_path(config['default_skills_md'])}`")
                 run_button = gr.Button("Generate Preview", variant="primary")
 
             with gr.Column():
+                ats_badge = gr.HTML()
                 with gr.Tabs():
+                    with gr.Tab("ATS Analysis"):
+                        ats_analysis = gr.Markdown()
                     with gr.Tab("Changes Made"):
                         changes_md = gr.Markdown()
                     with gr.Tab("LaTeX Preview"):
@@ -234,8 +299,8 @@ def build_ui() -> gr.Blocks:
 
         run_button.click(
             fn=_run_resumeforge,
-            inputs=[output_folder, stage1_model, stage2_model],
-            outputs=[changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
+            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle],
+            outputs=[ats_badge, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
         )
         apply_edit_button.click(
             fn=_apply_ai_edit_request,

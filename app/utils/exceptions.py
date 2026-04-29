@@ -13,3 +13,6 @@ class LLMError(ResumeForgeError):
 class RateLimitError(LLMError):
     """Raised when a provider rate limits requests."""
 
+
+class AuthenticationError(LLMError):
+    """Raised when provider credentials are invalid or expired."""

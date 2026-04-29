@@ -5,11 +5,13 @@ from langgraph.graph import END, StateGraph
 from app.agent.nodes.analyze_jd import analyze_jd
 from app.agent.nodes.assemble_latex import assemble_latex
 from app.agent.nodes.compile_pdf import compile_pdf
+from app.agent.nodes.enrich_company import enrich_company
 from app.agent.nodes.generate_projects import generate_projects
 from app.agent.nodes.generate_report import generate_report
 from app.agent.nodes.load_inputs import load_inputs
 from app.agent.nodes.parse_resume import parse_resume
 from app.agent.nodes.save_and_display import save_and_display
+from app.agent.nodes.score_resume import score_resume
 from app.agent.nodes.tailor_section import tailor_sections
 from app.agent.nodes.validate_output import validate_output
 from app.agent.state import ResumeState, default_state
@@ -26,18 +28,21 @@ def build_graph():
     graph.add_node("load_inputs", load_inputs)
     graph.add_node("parse_resume", parse_resume)
     graph.add_node("analyze_jd", analyze_jd)
+    graph.add_node("enrich_company", enrich_company)
     graph.add_node("generate_projects", generate_projects)
     graph.add_node("tailor_sections", tailor_sections)
     graph.add_node("validate_output", validate_output)
     graph.add_node("assemble_latex", assemble_latex)
     graph.add_node("compile_pdf", compile_pdf)
+    graph.add_node("score_resume", score_resume)
     graph.add_node("generate_report", generate_report)
     graph.add_node("save_and_display", save_and_display)
 
     graph.set_entry_point("load_inputs")
     graph.add_edge("load_inputs", "parse_resume")
     graph.add_edge("parse_resume", "analyze_jd")
-    graph.add_edge("analyze_jd", "generate_projects")
+    graph.add_edge("analyze_jd", "enrich_company")
+    graph.add_edge("enrich_company", "generate_projects")
     graph.add_edge("generate_projects", "tailor_sections")
     graph.add_edge("tailor_sections", "validate_output")
     graph.add_edge("validate_output", "assemble_latex")
@@ -46,10 +51,11 @@ def build_graph():
         "compile_pdf",
         _should_stop_after_compile,
         {
-            "continue": "generate_report",
+            "continue": "score_resume",
             "error": END,
         },
     )
+    graph.add_edge("score_resume", "generate_report")
     graph.add_edge("generate_report", "save_and_display")
     graph.add_edge("save_and_display", END)
     return graph.compile()

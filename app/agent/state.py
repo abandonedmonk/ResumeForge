@@ -20,6 +20,9 @@ class ResumeState(TypedDict):
     final_tex: str
     final_pdf_path: str
     saved_pdf_path: str
+    ats_score: dict[str, Any]
+    ats_score_summary: str
+    skills_gap: dict[str, list[str]]
     changes_report_md: str
     errors: list[str]
     status_updates: list[str]
@@ -45,6 +48,9 @@ def default_state() -> ResumeState:
         final_tex="",
         final_pdf_path="",
         saved_pdf_path="",
+        ats_score={},
+        ats_score_summary="",
+        skills_gap={},
         changes_report_md="",
         errors=[],
         status_updates=[],

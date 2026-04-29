@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Iterable
 
 
@@ -17,8 +18,32 @@ LATEX_SPECIAL_CHARS = {
     "^": r"\textasciicircum{}",
 }
 
+UNICODE_TEXT_REPLACEMENTS = {
+    "\u00a0": " ",
+    "\u2009": " ",
+    "\u202f": " ",
+    "\u2010": "-",
+    "\u2011": "-",
+    "\u2012": "-",
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2026": "...",
+}
+
+
+def normalize_latex_text(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text)
+    for source, replacement in UNICODE_TEXT_REPLACEMENTS.items():
+        normalized = normalized.replace(source, replacement)
+    return normalized
+
 
 def escape_latex(text: str) -> str:
+    text = normalize_latex_text(text)
     escaped: list[str] = []
     for char in text:
         escaped.append(LATEX_SPECIAL_CHARS.get(char, char))
@@ -50,4 +75,3 @@ def contains_unknown_project_name(text: str, known_projects: set[str]) -> bool:
         return False
     words = set(re.findall(r"[A-Za-z][A-Za-z0-9\-\+\.]+", text.lower()))
     return any(project.lower() in words for project in normalized_projects if project.lower() not in text.lower())
-

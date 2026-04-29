@@ -13,3 +13,4 @@ logs/
 *.fls
 *.fdb_latexmk
 docs
+scratch/

@@ -9,7 +9,7 @@ from app.llm.gemini import GeminiFlash
 from app.llm.groq import GroqModel
 from app.llm.openrouter import OpenRouterFree
 from app.utils.config import get_config
-from app.utils.exceptions import LLMError, RateLimitError
+from app.utils.exceptions import AuthenticationError, ConfigError, LLMError, RateLimitError
 
 
 def _provider_map():
@@ -30,13 +30,30 @@ def get_model(name: str, model_name: str | None = None):
     return provider_cls()
 
 
+def _describe_provider_error(name: str, exc: Exception, model_name: str | None = None) -> str:
+    target = f"{name}:{model_name}" if model_name else name
+    return f"{target} -> {exc}"
+
+
+def _raise_combined_error(stage_name: str, errors: list[str], last_error: Exception | None) -> None:
+    if errors:
+        raise LLMError(f"{stage_name} providers failed. " + " | ".join(errors))
+    if last_error:
+        raise last_error
+    raise LLMError(f"No {stage_name} models are configured.")
+
+
 class RoutedStage2Model:
     """Generation/Writing model (Stage 2)."""
     def __init__(self) -> None:
         config = get_config()
         self.preferred = config.get("stage2_model", "groq")
-        self.groq_model = config.get("groq_fast_model", "mixtral-8x7b-32768")
-        self.order = ["groq", "cohere", "openrouter", "copilot"]
+        self.groq_model = config.get("groq_fast_model", "qwen-3-32b")
+        self.groq_fallback_model = config.get(
+            "groq_fallback_fast_model",
+            "meta-llama/llama-4-maverick-17b-128e-instruct",
+        )
+        self.order = ["groq", "openrouter", "cohere", "copilot"]
         
         if self.preferred in self.order:
             self.order.remove(self.preferred)
@@ -44,17 +61,26 @@ class RoutedStage2Model:
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         last_error: Exception | None = None
+        errors: list[str] = []
         for name in self.order:
             try:
-                model_name = self.groq_model if name == "groq" else None
-                provider = get_model(name, model_name=model_name)
+                if name == "groq":
+                    for groq_model_name in (self.groq_model, self.groq_fallback_model):
+                        try:
+                            provider = get_model("groq", model_name=groq_model_name)
+                            return provider.call(system_prompt, user_prompt, temperature=temperature)
+                        except (ConfigError, RateLimitError, LLMError) as exc:
+                            errors.append(_describe_provider_error("groq", exc, groq_model_name))
+                            last_error = exc
+                    continue
+
+                provider = get_model(name, model_name=None)
                 return provider.call(system_prompt, user_prompt, temperature=temperature)
-            except (RateLimitError, LLMError) as exc:
+            except (ConfigError, RateLimitError, LLMError) as exc:
+                errors.append(_describe_provider_error(name, exc))
                 last_error = exc
                 continue
-        if last_error:
-            raise last_error
-        raise LLMError("No Stage 2 models are configured.")
+        _raise_combined_error("Stage 2", errors, last_error)
 
 
 class RoutedStage1Model:
@@ -63,6 +89,10 @@ class RoutedStage1Model:
         config = get_config()
         self.preferred = config.get("stage1_model", "groq")
         self.groq_model = config.get("groq_reasoning_model", "llama-3.3-70b-versatile")
+        self.groq_fallback_model = config.get(
+            "groq_fallback_reasoning_model",
+            config.get("groq_fallback_fast_model", "meta-llama/llama-4-maverick-17b-128e-instruct"),
+        )
         self.order = ["groq", "openrouter", "cohere", "copilot"]
         
         if self.preferred in self.order:
@@ -71,14 +101,23 @@ class RoutedStage1Model:
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.2) -> str:
         last_error: Exception | None = None
+        errors: list[str] = []
         for name in self.order:
             try:
-                model_name = self.groq_model if name == "groq" else None
-                provider = get_model(name, model_name=model_name)
+                if name == "groq":
+                    for groq_model_name in (self.groq_model, self.groq_fallback_model):
+                        try:
+                            provider = get_model("groq", model_name=groq_model_name)
+                            return provider.call(system_prompt, user_prompt, temperature=temperature)
+                        except (ConfigError, RateLimitError, LLMError) as exc:
+                            errors.append(_describe_provider_error("groq", exc, groq_model_name))
+                            last_error = exc
+                    continue
+
+                provider = get_model(name, model_name=None)
                 return provider.call(system_prompt, user_prompt, temperature=temperature)
-            except (RateLimitError, LLMError) as exc:
+            except (ConfigError, RateLimitError, LLMError) as exc:
+                errors.append(_describe_provider_error(name, exc))
                 last_error = exc
                 continue
-        if last_error:
-            raise last_error
-        raise LLMError("No Stage 1 models are configured.")
+        _raise_combined_error("Stage 1", errors, last_error)

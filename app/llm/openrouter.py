@@ -15,7 +15,10 @@ class OpenRouterFree(BaseLLM):
             "OPENROUTER_API_KEY is missing. Add it to your .env file to use OpenRouter.",
         )
         self.client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.api_key)
-        self.model = self.config.get("openrouter_model", "mistralai/mistral-7b-instruct:free")
+        self.model = self.config.get("openrouter_model") or self.config.get(
+            "openrouter_free_model",
+            "openai/gpt-oss-20b:free",
+        )
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         try:
@@ -32,4 +35,3 @@ class OpenRouterFree(BaseLLM):
             return text
         except Exception as exc:  # pragma: no cover - provider specific
             raise self.classify_exception(exc) from exc
-

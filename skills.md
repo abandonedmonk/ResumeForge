@@ -60,13 +60,13 @@ Every bullet must follow: **what was achieved → how → how big**
 
 ---
 
-## Keyword Injection Rules
+## Keyword Injection Rules (ATS Optimization)
 
-When tailoring for a JD:
-- Inject keywords **naturally** — if a keyword fits the bullet's existing meaning, swap in the JD's terminology
-- Never keyword-stuff: don't add keywords that misrepresent what was actually done
-- Prioritize injecting keywords into the **first bullet of each section** — ATS scanners weight earlier bullets more
-- If the JD uses "LLM inference optimization" and I have a bullet about GGUF quantization — that IS the same thing, use their terminology
+When tailoring for a JD, strictly follow these ATS scoring recommendations:
+- **Strategic Placement:** Move the most important JD keywords into your heading summary, skills block, and the *very first bullet* under your most recent/relevant experience. ATS scanners weight these sections heavily.
+- **Natural Integration:** Add more required JD keywords naturally into your experience and project bullets. If a keyword fits the bullet's existing meaning, swap in the JD's terminology.
+- **No Keyword Stuffing:** Never add keywords that misrepresent what was actually done.
+- **Terminology Matching:** If the JD uses "LLM inference optimization" and I have a bullet about GGUF quantization — that IS the same thing, use their exact terminology.
 
 ---
 
@@ -75,6 +75,7 @@ When tailoring for a JD:
     * *SaaS/Enterprise AI roles:* Prioritize AskAlpha, CLIGenix, MLOps Pipeline.
     * *Academic/Research roles:* Prioritize FCOSCraterNet, Quantum Portfolio, AskAlpha (as Neurosymbolic).
     * *Computer Vision/Geospatial roles:* Prioritize FCOSCraterNet, Food Package VLM, Autonomous Navigation.
+    * *Agent Infrastructure / AI Systems / Security roles:* Prioritize Ironclad Agent, AskAlpha, CLIGenix.
 * **Ordering:** When reordering the selected 3 projects for a JD, rank by:
     1. Domain match — does the project's core problem match the JD's domain?
     2. Tech stack overlap — does the project use tech explicitly mentioned in the JD?
@@ -89,6 +90,7 @@ Current projects and their domain tags:
 5. **Food Package and Freshness Detection:** Multimodal AI, Vision-Language Models (VLM), YOLO, LLaMA, OCR, structured data extraction, image processing.
 6. **End-to-End MLOps Pipeline for Cardiovascular Disease:** MLOps, Docker, MLflow, FastAPI, Prefect, classical ML (Scikit-learn), tabular/healthcare data, reproducible workflows.
 7. **Autonomous War-Torn Navigation System:** Robotics/Navigation, geospatial mapping, path planning/shortest path algorithms, IR sensors, OpenCV, real-time decision engines.
+8. **Ironclad Agent:** AI agents, secure code execution, Rust, WebAssembly, Wasmtime, audit logging, sandboxing, systems programming.
 ---
 
 ## Skills Section Ordering
@@ -97,9 +99,9 @@ Current projects and their domain tags:
 * **Full skills inventory (use only what's genuine):**
     * **Languages:** Python, C++, C, Rust, SQL, CUDA C/C++, Shell Scripting
     * **Deep Learning & Frameworks:** PyTorch, OpenCV, Hugging Face (TRL, Unsloth), Accelerate, Scikit-Learn, NumPy, SciPy, Pandas, Qiskit
-    * **Gen AI & LLM Engineering:** Agentic Workflows, LLM Quantization (GGUF), RAG Architectures, Fine-Tuning (PEFT/LoRA), Model Evaluation (Ragas), Multimodal Fusion
-    * **Computer Vision & 3D Perception:** Object Detection (YOLO, FCOS), Semantic/Instance Segmentation, Swin Transformers, BiFPN, ASPP, Feature Extraction
-    * **Systems, Optimization & MLOps:** AWS (Bedrock, S3, Lambda, API Gateway), GCP, FastAPI, Docker, MLflow, Prefect, Git, Numba (JIT compilation), CPU/GPU Inference
+    * **Gen AI & LLM Engineering:** Agentic Workflows, CrewAI, LangGraph, LLM Quantization (GGUF), RAG Architectures, FAISS, Fine-Tuning (PEFT/LoRA), Model Evaluation (Ragas), Multimodal Fusion, Prompt Engineering
+    * **Computer Vision & 3D Perception:** Object Detection (YOLO, FCOS), OCR, Semantic/Instance Segmentation, Swin Transformers, BiFPN, ASPP, Feature Extraction
+    * **Systems, Optimization & MLOps:** AWS (Bedrock, S3, Lambda, API Gateway), GCP, FastAPI, Docker, MLflow, Prefect, Git, Numba (JIT compilation), CPU/GPU Inference, WebSockets, Typer, Poetry, WebAssembly, Wasmtime
 * *Do not add skills not listed here. Do not fabricate tools I haven't used.*
 
 ---

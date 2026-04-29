@@ -45,7 +45,8 @@ def _fallback_projects(projects_context: dict[str, dict[str, object]], limit: in
             {
                 "title": project.get("heading", project.get("title", "Project")),
                 "bullets": bullets,
-                "date_range": "Month Year -- Month Year",
+                "date_range": str(project.get("date_range", "")).strip() or "Month Year -- Month Year",
+                "url": str(project.get("url", "")).strip(),
                 "selection_reason": "Fallback selection used because personalization generation failed.",
             }
         )
@@ -80,9 +81,13 @@ def generate_projects(state: ResumeState) -> ResumeState:
             p = projects_context.get(key)
             if p:
                 selected_projects_data.append({
+                    "key": key,
                     "title": p.get("heading", key),
                     "tech_stack": p.get("tech_stack", []),
+                    "keywords": p.get("keywords", []),
                     "bullets": p.get("bullets", []),
+                    "body": p.get("body", ""),
+                    "summary": p.get("summary", ""),
                     "url": p.get("url", ""),
                     "date_range": p.get("date_range", "Month Year -- Month Year")
                 })
@@ -111,16 +116,23 @@ def generate_projects(state: ResumeState) -> ResumeState:
         ]
 
         # Format Projects
-        state["generated_projects"] = [
-            {
-                "title": str(project.get("title", "")).strip(),
-                "bullets": [str(bullet).strip() for bullet in project.get("bullets", []) if str(bullet).strip()],
-                "date_range": str(project.get("date_range", "")).strip() or "Month Year -- Month Year",
-                "selection_reason": selection_reasoning.get("projects", "Selected for JD relevance."),
-            }
-            for project in gen_payload.get("projects", [])
-            if isinstance(project, dict)
-        ]
+        formatted_projects: list[dict[str, object]] = []
+        for index, project in enumerate(gen_payload.get("projects", [])):
+            if not isinstance(project, dict):
+                continue
+            source_project = selected_projects_data[index] if index < len(selected_projects_data) else {}
+            formatted_projects.append(
+                {
+                    "title": str(project.get("title", "")).strip() or str(source_project.get("title", "")).strip(),
+                    "bullets": [str(bullet).strip() for bullet in project.get("bullets", []) if str(bullet).strip()],
+                    "date_range": str(project.get("date_range", "")).strip()
+                    or str(source_project.get("date_range", "")).strip()
+                    or "Month Year -- Month Year",
+                    "url": str(source_project.get("url", "")).strip(),
+                    "selection_reason": selection_reasoning.get("projects", "Selected for JD relevance."),
+                }
+            )
+        state["generated_projects"] = formatted_projects
 
         state["personalization_notes"] = {
             "drafting_notes": str(gen_payload.get("drafting_notes", "")).strip(),

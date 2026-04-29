@@ -22,6 +22,8 @@ def build_selection_prompt(
                 "key": key,
                 "title": project.get("heading", key),
                 "tech_stack": project.get("tech_stack", []),
+                "keywords": project.get("keywords", []),
+                "summary": project.get("summary", ""),
             }
         )
     user_prompt = f"""
@@ -58,7 +60,7 @@ def build_generation_prompt(
     system_prompt = (
         f"{skills_md}\n\n"
         "You are a professional resume writer specializing in ATS optimization. "
-        "Write compelling headline, bullet points, and skill lists based on the selected items and JD.\n"
+        "Write compelling headline, bullet points, and skill lists based on the selected items, the detailed repo context, and the JD.\n"
         "Return JSON only. Use **bold emphasis** for key technical terms or achievements."
     )
     user_prompt = f"""
@@ -75,7 +77,8 @@ Task:
 1. Before writing, create "drafting_notes" summarizing which keywords from the JD you will prioritize for these specific selected items.
 2. Write a tailored one-sentence headline.
 3. For each selected skill category, list 3-5 specific technical skills or tools mentioned in the JD that fit that category.
-4. For each project, rewrite exactly 3 bullet points to emphasize relative experience and impact. Preserve metrics and follow the style guide.
+4. For each project, use the detailed repo context to rewrite exactly 3 bullet points that emphasize architecture, implementation depth, and role relevance. Preserve metrics and follow the style guide.
+5. Do not ignore the detailed context just because the old bullets are short. Pull concrete implementation details from the provided project body when they are truthful and role-relevant.
 
 Return valid JSON:
 {{
