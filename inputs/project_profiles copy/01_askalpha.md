@@ -1,11 +1,10 @@
 1. AskAlpha: Voice-Native Financial Research Agent
-[Date: Feb'26 – March'26]
 [GitHub URL: https://github.com/abandonedmonk/AskAlpha-Nova-Sonic-Financial-Research-Analyst]
 [Tech Stack: Python, AWS Bedrock Nova Sonic 2, FastAPI, WebSockets, React, TypeScript, FAISS, Ragas, NumPy, Finnhub, Polygon, Groq]
 [Keywords: Voice AI, AWS Bedrock, Nova Sonic, FastAPI, WebSockets, RAG, FAISS, SEC filings, Monte Carlo, React, TypeScript, agentic tools]
-- Developed a real-time voice AI agent orchestrating \textbf{4} multi-threaded financial backends via a bidirectional WebSocket stream; integrated a Nova Sonic session layer to enable native, zero-latency mid-sentence barge-in capabilities.
-- Engineered a fault-tolerant, dual-mode RAG pipeline using AWS Bedrock Knowledge Bases and FAISS fallback logic to index \textbf{320} pages of unstructured SEC 10-K filings, routing data via a stateful FastAPI Event Router.
-- Optimized quantitative analysis capabilities by vectorizing a Geometric Brownian Motion simulation in NumPy to execute \textbf{10,000} paths in \textbf{9.3ms}; established rigid model evaluation using Ragas over \textbf{37} queries, yielding a faithfulness score of \textbf{0.85}.
+- Built a real-time voice agent orchestrating **4** financial backends over a single bidirectional WebSocket stream with native mid-sentence interruption.
+- Engineered a dual-mode RAG pipeline (Bedrock KB + FAISS fallback) indexing **320** pages of SEC 10-K filings, tracking session state with a FastAPI Event Router.
+- Evaluated RAG pipeline with Ragas over **37** queries, achieving faithfulness **0.85**, identifying a **27\%** zero-retrieval rate; optimized Monte Carlo engine to run **10,000** paths in **9.3ms** via NumPy vectorization.
 
 ### What the repo actually contains
 The repository implements a voice-native financial research assistant with a FastAPI backend, a React + Vite frontend, a Nova Sonic session layer, and four tool backends exposed through a single event router. The backend accepts microphone audio over `/ws/voice`, forwards it to Bedrock Nova Sonic, receives tool-call events, dispatches them into Python handlers, and streams synthesized speech back to the browser.

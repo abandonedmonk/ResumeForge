@@ -1,11 +1,10 @@
 1. Autonomous War-Torn Navigation System
-[Date: Oct'23 – Feb'24]
 [GitHub URL: https://github.com/abandonedmonk/Autonomous-War-Torn-Navigation-System]
 [Tech Stack: Python, C++, YOLO, OpenCV, ArUco, shortest path algorithms, Arduino, serial communication, GIS]
 [Keywords: robotics, autonomous navigation, path planning, OpenCV, YOLO, ArUco, Arduino, obstacle detection, geospatial systems]
-- Formulated semantic hazard detection pipelines processing real-time video streams through YOLO architectures to identify unstructured obstacles, attaining an overall \textbf{80\%} accuracy score.
-- Structured position-estimation logic extracting ArUco-marker geometries via OpenCV to compute shortest-path routing configurations across graph structures.
-- Integrated low-level hardware abstraction logic bridging high-level spatial queries directly with serial execution interfaces for continuous deployment.
+- Built an autonomous rescue system for unmanned vehicles in war-torn environments using PyTorch and OpenCV, achieving **80\%** obstacle detection accuracy.
+- Designed a multi-stage pipeline processing IR sensor and camera module inputs, computing the safest routing via a shortest path planning algorithm.
+- Deployed optimized paths to a ground bot via Bluetooth and integrated a GIS dashboard for live remote monitoring across dynamic hazardous terrains.
 
 ### What the repo actually contains
 The repo combines vision-based event detection, map/path planning, and embedded control. One script runs YOLO-based event detection and assigns semantic labels such as combat, fire, destroyed buildings, and military vehicles. Another script performs ArUco-marker localization, CSV-based coordinate tracking, and graph-based route updates. An Arduino sketch under `Arduino/` supports the robot-side integration.

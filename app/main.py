@@ -87,6 +87,7 @@ def _run_resumeforge(
     stage1_model: str,
     stage2_model: str,
     enrich_with_web_search: bool,
+    jd_text_override: str = "",
 ):
     config = get_config()
     config["stage1_model"] = stage1_model
@@ -96,8 +97,16 @@ def _run_resumeforge(
     session_state: dict[str, Any] = {"status_updates": [], "errors": []}
     log_status(session_state, "Starting ResumeForge preview generation...")
 
+    # Use pasted JD if provided, otherwise fall back to the file in config
+    if jd_text_override and jd_text_override.strip():
+        jd_text = jd_text_override.strip()
+        log_status(session_state, "Using pasted Job Description text.")
+    else:
+        jd_text = resolve_path(config.get("default_jd_txt", "")).read_text(encoding="utf-8") if config.get("default_jd_txt", "") else ""
+        log_status(session_state, f"Using JD file: {config.get('default_jd_txt', 'N/A')}")
+
     initial_state = {
-        "jd_text": resolve_path(config.get("default_jd_txt", "")).read_text(encoding="utf-8") if config.get("default_jd_txt", "") else "",
+        "jd_text": jd_text,
         "original_resume_tex": str(config["default_resume_tex"]),
         "skills_md": str(config["default_skills_md"]),
         "projects_context": str(config["default_projects_md"]),
@@ -187,11 +196,11 @@ def _build_run_log_content(final_state: dict, new_logs: list[Path]) -> str:
     return "\n".join(lines)
 
 
-def _apply_ai_edit_request(current_latex: str, edit_request: str, stage2_model: str) -> tuple[str, str]:
+def _apply_ai_edit_request(current_latex: str, edit_request: str, stage2_model: str, output_folder: str) -> tuple[str, str, Any]:
     if not current_latex.strip():
-        return current_latex, "No LaTeX preview available yet."
+        return current_latex, "No LaTeX preview available yet.", None
     if not edit_request.strip():
-        return current_latex, "Enter an edit request first."
+        return current_latex, "Enter an edit request first.", None
 
     config = get_config()
     config["stage2_model"] = stage2_model
@@ -214,12 +223,30 @@ Current LaTeX resume:
         updated = RoutedStage2Model().call(system_prompt, user_prompt)
     except Exception as exc:
         log_error(session_state, f"AI edit request failed: {exc}")
-        return current_latex, "\n".join(session_state["errors"])
+        return current_latex, "\n".join(session_state["errors"]), None
     cleaned = updated.strip()
     if "```" in cleaned:
         cleaned = cleaned.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
-    log_status(session_state, "Applied AI edit request to the preview. Review the LaTeX before saving.")
-    return cleaned, "\n".join(session_state["status_updates"])
+    # Strip any prose the LLM may have prepended before \documentclass
+    doc_idx = cleaned.find(r"\documentclass")
+    if doc_idx > 0:
+        cleaned = cleaned[doc_idx:]
+
+    # Recompile to update the PDF preview
+    new_pdf_path: str | None = None
+    try:
+        from app.agent.nodes.compile_pdf import compile_tex_to_pdf
+        preview_dir = Path(output_folder) / config.get("preview_folder_name", ".preview")
+        preview_name = f"edit_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.pdf"
+        temp_pdf = preview_dir / preview_name
+        compile_tex_to_pdf(cleaned, temp_pdf)
+        new_pdf_path = str(temp_pdf)
+        log_status(session_state, "Applied AI edit and recompiled PDF preview.")
+    except Exception as exc:
+        log_error(session_state, f"PDF recompile after edit failed: {exc}")
+        log_status(session_state, "Applied AI edit request to the preview. Review the LaTeX before saving.")
+
+    return cleaned, "\n".join(session_state["status_updates"] + session_state["errors"]), new_pdf_path
 
 
 def _save_preview(final_state: dict, reviewed_latex: str):
@@ -237,15 +264,88 @@ def _save_preview(final_state: dict, reviewed_latex: str):
     return safe_path, f"Saved approved PDF to {safe_path}", updated_state
 
 
+def _quick_match_jd(jd_text: str, model: str) -> str:
+    if not jd_text.strip():
+        return "⚠️ Please paste a Job Description first."
+    
+    from app.llm.router import RoutedStage1Model
+    
+    system_prompt = """You are an expert tech recruiter routing applications.
+The candidate has 5 pre-made 'Archetype' resumes ready to go. Each contains exactly 3 specific projects:
+
+1. **GenAI / Agent Engineer**
+   - Projects: AskAlpha, Ironclad Agent, CLIGenix
+   - Best for: LLM apps, agentic workflows, RAG, prompt engineering.
+2. **Computer Vision Engineer**
+   - Projects: FCOSCraterNet, Food Package Freshness, Autonomous Navigation
+   - Best for: Image processing, object detection, Deep Learning, visual AI.
+3. **MLOps / AI Infrastructure Engineer**
+   - Projects: MLOps Heart Disease, Ironclad Agent, AskAlpha
+   - Best for: CI/CD, pipelines, deployment, Docker, systems, backend AI.
+4. **AI / Applied Researcher**
+   - Projects: Hybrid Quantum-Classical, FCOSCraterNet, CLIGenix
+   - Best for: Heavy math, custom architecture, fine-tuning, algorithm research.
+5. **Edge AI / Robotics Engineer**
+   - Projects: Autonomous Navigation, Food Package Freshness, Ironclad Agent
+   - Best for: Hardware, C++, real-time inference, Rust, robotics, embedded.
+
+Analyze the Job Description. Pick the SINGLE best Archetype for this role.
+Return your answer formatted EXACTLY like this (use Markdown):
+
+### Recommended Resume: [Archetype Name]
+**Why:** [2-3 sentences explaining exactly why this archetype fits the JD's core requirements, explicitly mentioning how the 3 included projects align with the role.]
+"""
+    try:
+        from app.utils.config import get_config
+        config = get_config()
+        # Temporarily override stage1_model for this call
+        config["stage1_model"] = model
+        response = RoutedStage1Model().call(system_prompt, f"Job Description:\n{jd_text}")
+        return response.strip()
+    except Exception as exc:
+        return f"**Error matching JD:** {exc}"
+
+
 def build_ui() -> gr.Blocks:
     config = get_config()
     with gr.Blocks(title="ResumeForge - Resume Tailoring Agent") as demo:
         gr.Markdown("# ResumeForge - Resume Tailoring Agent")
-        gr.Markdown("Using static test inputs from the `test_files` folder for now. Generate a preview and review the filled LaTeX output.")
+        
+        with gr.Tabs():
+            with gr.Tab("Archetype Matcher (Quick)"):
+                gr.Markdown("Skip the generation. Paste a JD and instantly find out which of your 5 pre-made resumes to submit.")
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        matcher_jd = gr.Textbox(label="Paste Job Description", lines=15, max_lines=30)
+                        matcher_model = gr.Dropdown(
+                            label="Reasoning Model",
+                            choices=["groq", "openrouter", "cohere", "copilot"],
+                            value=config.get("stage1_model", "groq"),
+                        )
+                        match_btn = gr.Button("Find Matching Resume", variant="primary")
+                    with gr.Column(scale=1):
+                        matcher_output = gr.Markdown("Waiting for JD...")
+                        
+            with gr.Tab("Full Generator (Custom PDF)"):
+                gr.Markdown("Generate a fully custom LaTeX resume tailored line-by-line to a JD.")
+                with gr.Row():
+                    with gr.Column():
+                # ── Job Description input ──────────────────────────────────
+                with gr.Accordion("📋 Paste Job Description", open=False):
+                    gr.Markdown(
+                        "Paste the full JD text here. Leave blank to use the default JD file from config: "
+                        f"`{resolve_path(config.get('default_jd_txt', 'N/A'))}`"
+                    )
+                    jd_text_input = gr.Textbox(
+                        label="Job Description",
+                        placeholder="Paste the job description here…",
+                        lines=14,
+                        max_lines=40,
+                    )
+                    clear_jd_button = gr.Button("🗑️ Clear JD", size="sm", variant="secondary")
+                    clear_jd_button.click(fn=lambda: "", outputs=jd_text_input)
 
-        with gr.Row():
-            with gr.Column():
-                gr.Markdown(f"JD: `{resolve_path(config.get('default_jd_txt', ''))}`")
+                # ── Other inputs ───────────────────────────────────────────
                 gr.Markdown(f"Template: `{resolve_path(config['default_resume_tex'])}`")
                 gr.Markdown(f"Projects Inventory: `{resolve_path(config['default_projects_md'])}`")
                 output_folder = gr.Textbox(
@@ -297,15 +397,21 @@ def build_ui() -> gr.Blocks:
 
         state_store = gr.State({})
 
+        match_btn.click(
+            fn=_quick_match_jd,
+            inputs=[matcher_jd, matcher_model],
+            outputs=[matcher_output],
+        )
+
         run_button.click(
             fn=_run_resumeforge,
-            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle],
+            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input],
             outputs=[ats_badge, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
         )
         apply_edit_button.click(
             fn=_apply_ai_edit_request,
-            inputs=[latex_preview, edit_request, stage2_model],
-            outputs=[latex_preview, edit_status],
+            inputs=[latex_preview, edit_request, stage2_model, output_folder],
+            outputs=[latex_preview, edit_status, pdf_file],
         )
         save_button.click(
             fn=_save_preview,
@@ -348,6 +454,7 @@ def main() -> int:
         inbrowser=bool(config.get("open_browser_on_launch", True)),
         server_name="0.0.0.0",
         server_port=int(config.get("gradio_port", 7860)),
+        allowed_paths=[config["dest_folder"]] if config.get("dest_folder") else [],
     )
     return 0
 

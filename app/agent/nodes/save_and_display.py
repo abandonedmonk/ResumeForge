@@ -19,7 +19,10 @@ def save_reviewed_output(state: ResumeState, reviewed_tex: str | None = None) ->
     if not state["final_pdf_path"] and not reviewed_tex:
         return state
 
-    output_dir = Path(state["output_folder"])
+    config = get_config()
+    # Final approved PDFs go to dest_folder (e.g. G: drive); fall back to output_folder
+    dest = config.get("dest_folder", "") or state["output_folder"]
+    output_dir = Path(dest)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     company_name = state["jd_analysis"].get("company_name", "Company")
@@ -33,13 +36,15 @@ def save_reviewed_output(state: ResumeState, reviewed_tex: str | None = None) ->
         state["final_tex"] = reviewed_tex
     else:
         preview_pdf = Path(state["final_pdf_path"])
-        preview_pdf.replace(final_pdf_path)
+        import shutil
+        shutil.copy2(preview_pdf, final_pdf_path)
 
     state["saved_pdf_path"] = str(final_pdf_path)
 
-    config = get_config()
     if config.get("save_history", True):
-        history_dir = output_dir / "history" / build_history_folder_name(company_name, role_title)
+        # History stays in the local output folder alongside previews
+        local_output_dir = Path(state["output_folder"])
+        history_dir = local_output_dir / "history" / build_history_folder_name(company_name, role_title)
         history_dir.mkdir(parents=True, exist_ok=True)
         basename = build_output_basename(company_name, role_title)
         history_pdf = history_dir / f"{basename}.pdf"

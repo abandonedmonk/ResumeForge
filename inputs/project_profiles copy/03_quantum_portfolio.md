@@ -1,11 +1,10 @@
 1. Hybrid Quantum-Classical Portfolio Optimization
-[Date: July'25 – Aug'25]
 [GitHub URL: https://github.com/abandonedmonk/Hybrid-Quantum-Classical-approach-for-Portfolio-Optimization]
 [Tech Stack: Python, Qiskit, Qiskit Aer, Docplex, CPLEX, Numba, SciPy, VQE, QUBO, L-BFGS-B]
 [Keywords: quantum computing, VQE, QUBO, portfolio optimization, Qiskit, Numba, L-BFGS-B, CPLEX, mathematical optimization]
-- Modeled and solved a complex financial allocation algorithm containing \textbf{31} continuous risk constraints by implementing a hybrid quantum-classical pipeline utilizing Qiskit hardware simulators.
-- Formulated custom linear programming constraints into Quadratic Unconstrained Binary Optimization (QUBO) penalty models; wrote high-performance cost functions using Numba's JIT compilation to accelerate hardware execution.
-- Executed Variational Quantum Eigensolvers using L-BFGS-B classical optimizers to iteratively adjust parameterized ansatz layers, successfully reaching precision metrics equivalent to enterprise CPLEX solutions.
+- Tackled a real-world portfolio optimization problem with **31** financial constraints to maximize returns using hybrid quantum-classical methods.
+- Converted .lp formulations into QUBO models and implemented a Variational Quantum Eigensolver (VQE) using parameter-shift gradients JIT-compiled with Numba.
+- Integrated L-BFGS-B classical convex optimization to update ansatz parameters, achieving theoretical allocations matching enterprise CPLEX solvers.
 
 ### What the repo actually contains
 The repository centers on a hybrid workflow for a `31bonds` optimization instance. It starts from `.lp` formulations, converts them into objective functions and QUBO-style embeddings, compiles ansatz circuits, executes hardware or simulator runs, and performs post-processing/local search. The repo also contains experiment notebooks, figures for convergence analysis, and a presentation deck.

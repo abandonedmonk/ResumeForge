@@ -1,0 +1,149 @@
+\documentclass[letterpaper,10pt]{article}
+\usepackage{anyfontsize}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{soul}
+\geometry{
+  top=0.5in,
+  bottom=0.5in,
+  left=0.6in,
+  right=0.6in
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+% Section formatting
+\titleformat{\section}{
+  \vspace{-1pt}\scshape\bfseries\raggedright\large
+}{}{0em}{\MakeUppercase}[\color{black}\titlerule \vspace{0pt}]
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item{\small\setlength{\baselineskip}{10pt} #1 \vspace{-2pt}}
+}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{\textwidth}[t]{@{}p{0.75\textwidth}@{\extracolsep{\fill}}r@{}}
+      \textbf{#1} & \small #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+      \small#1 & \small\textit{#2} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, label={$\bullet$}, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+%-------------------------------------------
+%%%%%% RESUME STARTS HERE %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+\fontsize{10.5}{11}\selectfont
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape \textbf{Anshuman Jena}} \\ \vspace{4pt}
+    \href{mailto:anshumanjena.dev@gmail.com}{\ul{anshumanjena.dev@gmail.com}} $|$
+    \href{https://www.linkedin.com/in/anshumanjena/}{\ul{LinkedIn}} $|$
+    \href{https://github.com/abandonedmonk}{\ul{GitHub}} $|$
+    +91 8668242439 \\ \vspace{6pt}
+    {AI/Computer Vision engineer with hands-on experience in PyTorch and geospatial analysis, seeking to accelerate research infrastructure at Auric AI Labs.}
+\end{center}
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Vidyavardhini's College of Engineering and Technology, Mumbai \mbox{University}}{CGPA: 8.65}
+    {Bachelors in Computer Engineering}{\textit{Expected Graduation: May 2026}}  \vspace{-9pt}
+  \item \small{\textbf{Relevant Coursework:} Data Mining and Warehousing, Discrete Mathematics and Graph Theory, Engineering Mathematics} \vspace{-6pt}
+  \item \small{\textbf{GATE Ranks:} \textbf{AIR 1388} in DSAI (Top 2.4\%) $|$ \textbf{AIR 2763} in CSE}
+\resumeSubHeadingListEnd
+%-----------SKILLS-----------
+\section{Skills}
+\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]
+  \small{\item{
+    % PLACEHOLDER_SKILLS_START
+    \textbf{Computer Vision}: PyTorch, Object Detection, Image Processing, Segmentation, Classification, QGIS, OpenCV \\
+    \textbf{Deep Learning \& Frameworks}: PyTorch, TensorFlow, YOLO \\
+    \textbf{Systems, Optimization \& MLOps}: Python, AWS (Bedrock, S3, etc), FastAPI, MLflow, Prefect \\
+    \textbf{Languages}: Python, C++, C, Rust
+    % PLACEHOLDER_SKILLS_END
+  }}
+\end{itemize}
+%-----------INTERNSHIP EXPERIENCE-----------
+\section{Internship Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Team Infits}{Remote}
+    {ML Intern}{June 2024 -- September 2024}
+    \resumeItemListStart
+      \resumeItem{Led the end-to-end development of an automated solution using Selenium, optimizing user experience by 30 hours, and integrated with LLM technology to enhance a LinkedIn chatbot.}
+      \resumeItem{Integrated the automation with LLM technology to enhance a LinkedIn chatbot for dynamic, real-time interaction.}
+      \resumeItem{Conducted extensive research on multiple LLMs to identify and prompt optimal models for solving high school-level math problems, improving learning outcomes through advanced AI techniques.}
+    \resumeItemListEnd
+\resumeSubHeadingListEnd
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+  % PLACEHOLDER_PROJECTS_START
+  \resumeProjectHeading
+    {\textbf{FCOSCraterNet: Dense Lunar Crater Detection} $|$ \href{https://github.com/abandonedmonk/Lunar-Crater-Detection-using-Swin-Transformer}{\underline{Project Link}}}{June 2025 -- Dec 2025}
+    \resumeItemListStart
+      \resumeItem{Architected a fully custom Fully Convolutional One-Stage (FCOS) dense object detection model using PyTorch, replacing basic feature backbones with a Swin Transformer and a weighted BiFPN decoder for granular spatial extraction, achieving a \textbf{68.8\%} overall F1 score.}
+      \resumeItem{Developed a robust \textbf{6}-stage dynamic training loop merging Balanced L1 regression with Distance-IoU objectives to counteract severe geometric scale variations across dense lunar imagery, elevating raw prediction precision from \textbf{72\%} to \textbf{77\%}.}
+      \resumeItem{Implemented a production FCOS-style crater detector with classification, centerness, and distance-regression heads, using Modal for training entrypoints.}
+    \resumeItemListEnd
+  \resumeProjectHeading
+    {\textbf{Food Package and Freshness Detection} $|$ \href{https://github.com/abandonedmonk/Food-Package-and-Freshness-Detection}{\underline{Project Link}}}{Nov 2024 -- Dec 2024}
+    \resumeItemListStart
+      \resumeItem{Deployed a pipeline combining YOLO vision networks with LLaMA capabilities to process product freshness assessments, achieving a robust \textbf{90\%} prediction accuracy.}
+      \resumeItem{Coupled localized visual tracking heuristics with zero-shot text parsers, translating unstructured video streams into categorized JSON representations of target items, using Streamlit for application development.}
+      \resumeItem{Built queue-based asynchronous data handlers allowing real-time video processing to fire separate inference workloads without blocking central execution loops, using Python and Groq for vision-language model integration.}
+    \resumeItemListEnd
+  \resumeProjectHeading
+    {\textbf{Autonomous War-Torn Navigation System} $|$ \href{https://github.com/abandonedmonk/Autonomous-War-Torn-Navigation-System}{\underline{Project Link}}}{Oct 2023 -- Feb 2024}
+    \resumeItemListStart
+      \resumeItem{Formulated semantic hazard detection pipelines processing real-time video streams through YOLO architectures to identify unstructured obstacles, attaining an overall \textbf{80\%} accuracy score, using Arduino for embedded systems integration.}
+      \resumeItem{Structured position-estimation logic extracting ArUco-marker geometries via geometric calculations to compute shortest-path routing configurations across graph structures, using Python and C++ for implementation.}
+      \resumeItem{Integrated low-level hardware abstraction logic bridging high-level spatial queries directly with serial execution interfaces for continuous deployment, using Arduino and serial communication for robot control.}
+    \resumeItemListEnd
+  % PLACEHOLDER_PROJECTS_END
+\resumeSubHeadingListEnd
+%-----------CERTIFICATIONS-----------
+\section{Certifications}
+\begin{itemize}[leftmargin=0in, label={}, itemsep=0pt, parsep=0pt, topsep=0pt, partopsep=0pt]
+  \small{
+    \item MLOps Zoomcamp --- DataTalksClub $|$ \href{https://certificate.datatalks.club/mlops-zoomcamp/2025/bcf4ead282968541b9bad62738afe665372cc85a.pdf}{\underline{Certificate Link}}
+    \item Getting Started with Deep Learning --- NVIDIA $|$ \href{https://learn.nvidia.com/certificates?id=QRIzjtaaQJaHCNYJVC9SSQ}{\underline{Certificate Link}}
+    \item Applied ML for AIOps: Anomaly Detection \& Forecasting --- KodeKloud $|$ \href{https://learn.kodekloud.com/certificate/314c648f-e213-4857-9e32-a161e1499e50}{\underline{Certificate Link}}
+    \item Google Cloud Skills Boost Campaign $|$ Gained practical expertise in implementing DevOps and AI on GCP
+  }
+\end{itemize}
+%-----------ACHIEVEMENTS AND EXTRACURRICULAR-----------
+\section{Achievements and Extracurricular Engagement}
+\resumeSubHeadingListStart
+  \item \resumeItemListStart
+    \resumeItem{Winner in Embedded Systems and Micro-controller National Level Product Showcase}
+    \resumeItem{Semi-finalist in International E-yantra Robotics Challenge (EYRC)}
+  \resumeItemListEnd
+\resumeSubHeadingListEnd
+%-------------------------------------------
+\end{document}

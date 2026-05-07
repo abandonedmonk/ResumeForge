@@ -76,7 +76,7 @@ Selected skill categories to fill:
 Task:
 1. Before writing, create "drafting_notes" summarizing which keywords from the JD you will prioritize for these specific selected items.
 2. Write a tailored one-sentence headline.
-3. For each selected skill category, list 3-5 specific technical skills or tools mentioned in the JD that fit that category.
+3. For each selected skill category, pick 3-5 items from the candidate's actual skill inventory (from the system prompt) that best map to the JD requirements. Use the candidate's exact tool names (e.g., 'Ragas' not 'evals', 'LangGraph' or 'CrewAI' not 'agentic workflows', 'AWS (Bedrock, S3, etc)' not just 'AWS'). Do NOT invent new skills or paraphrase tool names. Sort the items within each skill category such that the exact matching technical keywords appear first in the list. CRITICAL: each individual skill item must appear in AT MOST ONE category — never repeat the same tool across multiple categories.
 4. For each project, use the detailed repo context to rewrite exactly 3 bullet points that emphasize architecture, implementation depth, and role relevance. Preserve metrics and follow the style guide.
 5. Do not ignore the detailed context just because the old bullets are short. Pull concrete implementation details from the provided project body when they are truthful and role-relevant.
 

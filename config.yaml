@@ -7,10 +7,12 @@ openrouter_model: "openai/gpt-oss-20b:free"
 openrouter_free_model: "openai/gpt-oss-20b:free"
 groq_fallback_reasoning_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
 copilot_model: "gpt-4o"
+cohere_model: "command-r"
 default_skills_md: "skills.md"
 default_jd_txt: "test_files/jd.txt"
 default_projects_md: "inputs/project_profiles"
 default_resume_tex: "test_files/template.tex"
+dest_folder: "G:/My Drive/Resumes/Applied"
 default_output_folder: "outputs"
 save_history: true
 open_browser_on_launch: true

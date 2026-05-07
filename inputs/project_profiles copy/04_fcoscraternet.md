@@ -1,11 +1,10 @@
 1. FCOSCraterNet: Dense Lunar Crater Detection
-[Date: June'25 – Dec'25]
 [GitHub URL: https://github.com/abandonedmonk/Lunar-Crater-Detection-using-Swin-Transformer]
 [Tech Stack: Python, PyTorch, Swin Transformer, BiFPN, ASPP, Modal, OpenCV, CUDA]
 [Keywords: computer vision, object detection, PyTorch, Swin Transformer, BiFPN, ASPP, FCOS, dense prediction, geospatial imagery]
-- Architected a fully custom Fully Convolutional One-Stage (FCOS) dense object detection model, replacing basic feature backbones with a Swin Transformer and a weighted BiFPN decoder for granular spatial extraction.
-- Developed a robust \textbf{6}-stage dynamic training loop merging Balanced L1 regression with Distance-IoU objectives to counteract severe geometric scale variations across dense lunar imagery.
-- Evaluated architectures on the benchmark DeepMoon dataset to capture heavily obscured features, achieving a \textbf{68.8\%} overall F1 score while elevating raw prediction precision from \textbf{72\%} to \textbf{77\%}.
+- Architected a dense object detection model from scratch, integrating a Swin Transformer backbone with Atrous Spatial Pyramid Pooling (ASPP) and a BiFPN decoder.
+- Engineered a **6**-stage dynamic loss schedule coupling Balanced L1 and DIoU objectives, using size-stratified gradient weighting to counteract target under-representation.
+- Achieved a **68.8\%** F1 score on the DeepMoon benchmark dataset, driving a substantial precision increase from **72\%** to **77\%** by algorithmically suppressing false positives.
 
 ### What the repo actually contains
 The repo is a full crater-detection training stack for the DeepMoon dataset. It includes the production FCOS model, a baseline vanilla model, dataset loaders, Modal-based training entrypoints, debugging tests, and detailed technical docs that explain architecture choices and the active training schedule.

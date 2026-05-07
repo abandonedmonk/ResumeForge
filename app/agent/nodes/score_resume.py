@@ -43,7 +43,7 @@ def _dedupe_keywords(items: list[str]) -> list[str]:
     return deduped
 
 
-def _semantic_context_score(keywords: list[str], bullets: list[str]) -> dict[str, object]:
+def _semantic_context_score(keywords: list[str], bullets: list[str], skills_text: str) -> dict[str, object]:
     config = get_config()
     if not config.get("ats_semantic_scoring", True):
         return {
@@ -55,7 +55,7 @@ def _semantic_context_score(keywords: list[str], bullets: list[str]) -> dict[str
         }
 
     try:
-        system_prompt, user_prompt = build_semantic_score_prompt(keywords, bullets)
+        system_prompt, user_prompt = build_semantic_score_prompt(keywords, bullets, skills_text)
         response = GeminiFlash(model_name=config.get("gemini_semantic_model", "gemini-2.5-flash")).call(
             system_prompt,
             user_prompt,
@@ -132,7 +132,10 @@ def score_resume(state: ResumeState) -> ResumeState:
         )
     )
 
-    semantic = _semantic_context_score(base_keywords, bullets)
+    sections = split_sections(state["final_tex"])
+    skills_text = strip_latex_commands(sections.get("Skills", ""))
+
+    semantic = _semantic_context_score(base_keywords, bullets, skills_text)
     if semantic.get("fallback") and semantic.get("error"):
         log_error(state, f"ATS semantic scoring fallback used: {semantic['error']}")
 
@@ -151,8 +154,6 @@ def score_resume(state: ResumeState) -> ResumeState:
     target_metrics = max(1, int(round(len(bullets) * 0.6)))
     impact_score = int(round(min(metrics_bullets / target_metrics, 1.0) * 100))
 
-    sections = split_sections(state["final_tex"])
-    skills_text = strip_latex_commands(sections.get("Skills", ""))
     _ = keyword_frequency(skills_text, base_keywords, synonym_map)
 
     missing_required = [

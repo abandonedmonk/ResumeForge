@@ -1,11 +1,10 @@
 1. End-to-End MLOps Pipeline for Cardiovascular Disease Prediction
-[Date: June'25 – Aug'25]
 [GitHub URL: https://github.com/abandonedmonk/End-to-End-MLOps-Pipeline-for-Cardiovascular-Disease-Prediction]
 [Tech Stack: Python, Scikit-Learn, MLflow, Prefect, FastAPI, Docker, Pandas, NumPy, Poetry]
 [Keywords: MLOps, MLflow, Prefect, FastAPI, Docker, model registry, experiment tracking, healthcare ML, orchestration]
-- Engineered an automated MLOps pipeline mapping \textbf{13} multi-modal patient features across \textbf{303} clinical records, securing an optimal \textbf{85\%} predictive accuracy threshold for medical diagnostic evaluations.
-- Orchestrated continuous training loops via Prefect, unifying hyperparameter sweeps, deployment lifecycle transitions, and model registration patterns using persistent MLflow storage servers.
-- Containerized high-speed inference endpoints using Docker architectures paired with FastAPI, ensuring clean deployment paradigms isolated from local operating environments.
+- Built an end-to-end MLOps pipeline for heart disease prediction using the UCI Cleveland dataset with **303** records and **13** features, achieving **85\%** accuracy.
+- Implemented a reproducible automated workflow using MLflow for experiment tracking, Prefect for orchestration, FastAPI for serving, and Docker for containerization.
+- Automated the full model lifecycle across continuous training, registry management, and deployment to ensure a scalable, production-ready architecture.
 
 ### What the repo actually contains
 The repository follows a cookiecutter-style MLOps layout with separate API, training, data, models, notebooks, and tests directories. The pipeline loads and preprocesses the Cleveland heart-disease dataset, trains multiple classical ML models, logs runs into MLflow, registers the best model, downloads the chosen artifact, and serves predictions through FastAPI and Docker.

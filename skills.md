@@ -32,12 +32,15 @@ Every bullet must follow: **what was achieved → how → how big**
 ❌ Bad: `Used PyTorch to fine-tune a language model.`  
 ✅ Good: `Fine-tuned TinyLlama-1.1B on NL2SH dataset using Unsloth + HuggingFace TRL, achieving 74% accuracy on resource-constrained hardware (16GB RAM, i7 CPU).`
 
-### Metrics Are Sacred
-- Every number in the original bullet MUST appear in the rewritten bullet
-- Never round, estimate, or change a metric
-- Keep all `\textbf{}` wrappers around numbers — do not strip LaTeX formatting
-- Do not enclose metrics or numbers in parentheses or brackets (e.g., write `achieved \textbf{74\%} accuracy` instead of `(\textbf{74\%} accuracy)`)
-- If a bullet has no metric, it's okay — don't fabricate one
+### Metrics & Contextual Bolding
+- Every number in the original bullet MUST appear in the rewritten bullet. Never round, estimate, or change a metric.
+- Do not enclose metrics or numbers in parentheses or brackets (e.g., write `achieved \textbf{74\% accuracy}` instead of `(\textbf{74\%} accuracy)`).
+- If a bullet has no metric, don't fabricate one.
+- **Contextual Bolding (Crucial):** Never wrap just a naked number in `\textbf{}`. You MUST bold the *entire outcome phrase* or tool name.
+  - ❌ Weak: `...yielding a faithfulness score of \textbf{0.85}`
+  - ✅ Strong: `...yielding a \textbf{faithfulness score of 0.85}`
+  - ❌ Weak: `Optimized Monte Carlo engine to run \textbf{10,000} paths in \textbf{9.3ms}`
+  - ✅ Strong: `Optimized Monte Carlo engine to run \textbf{10,000 paths in 9.3ms}`
 
 ### Action Verb Rules
 - Start every bullet with a **strong, specific past-tense verb**
@@ -65,8 +68,9 @@ Every bullet must follow: **what was achieved → how → how big**
 When tailoring for a JD, strictly follow these ATS scoring recommendations:
 - **Strategic Placement:** Move the most important JD keywords into your heading summary, skills block, and the *very first bullet* under your most recent/relevant experience. ATS scanners weight these sections heavily.
 - **Natural Integration:** Add more required JD keywords naturally into your experience and project bullets. If a keyword fits the bullet's existing meaning, swap in the JD's terminology.
+- **Show, Don't Tell:** Never list a soft-skill or generic keyword (like "Scalability", "Leadership", "Optimization") by itself. You MUST anchor it to a specific tool, architecture, or metric (e.g., instead of writing "Ensured scalability", write "Engineered for scalability by optimizing Monte Carlo paths to run in \textbf{9.3ms}").
 - **No Keyword Stuffing:** Never add keywords that misrepresent what was actually done.
-- **Terminology Matching:** If the JD uses "LLM inference optimization" and I have a bullet about GGUF quantization — that IS the same thing, use their exact terminology.
+- **Terminology Mapping:** Map vague JD concepts to your exact technical tools. (e.g., 'evals' → `Ragas`, 'agentic workflows' → `LangGraph / CrewAI`, 'cloud' → `AWS (Bedrock, S3, etc)`). Never write bland placeholders.
 
 ---
 
@@ -140,8 +144,8 @@ When generating JD-tailored resume content for this project:
 
 - The AI should choose the headline summary, the skills ordering/content, and the project selection based on the JD
 - The AI should not output LaTeX directly for those sections; Python will format and inject the final LaTeX
-- For project bullets and skill items, use plain text with optional Markdown-style bold markers like `**FastAPI**` or `**RAG**`
-- Use bold sparingly and only for the most ATS-relevant tools, domains, outcomes, or keywords
+- For project bullets and skill items, use plain text with optional Markdown-style bold markers like `**RAG Architectures**` or `**FAISS**`
+- **Bold Full Phrases:** Use `**` sparingly, but wrap the entire core achievement or outcome phrase rather than isolated numbers (e.g., use `**faithfulness score of 0.85**`, not just `**0.85**`).
 - Keep all facts grounded in the supplied project inventory and skill inventory
 - Skills should be returned as ordered categories with ordered items, not as one flat blob
 - Project selection should explain briefly why each chosen project matches the JD

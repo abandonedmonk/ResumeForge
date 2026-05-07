@@ -105,8 +105,8 @@ def generate_projects(state: ResumeState) -> ResumeState:
 
         state["generated_headline"] = str(gen_payload.get("headline", "")).strip()
 
-        # Format Skills
-        state["generated_skills"] = [
+        # Format Skills — then deduplicate across categories
+        raw_skills = [
             {
                 "category": str(category.get("category", "")).strip(),
                 "items": [str(item).strip() for item in category.get("items", []) if str(item).strip()],
@@ -114,6 +114,19 @@ def generate_projects(state: ResumeState) -> ResumeState:
             for category in gen_payload.get("skills", [])
             if isinstance(category, dict)
         ]
+        seen: set[str] = set()
+        deduped_skills: list[dict[str, object]] = []
+        for cat in raw_skills:
+            unique_items: list[str] = []
+            for item in cat["items"]:
+                # Normalise: lowercase + strip anything after the first '(' for fuzzy matching
+                key = item.lower().split("(")[0].strip()
+                if key not in seen:
+                    seen.add(key)
+                    unique_items.append(item)
+            if unique_items:
+                deduped_skills.append({"category": cat["category"], "items": unique_items})
+        state["generated_skills"] = deduped_skills
 
         # Format Projects
         formatted_projects: list[dict[str, object]] = []

@@ -1,11 +1,10 @@
 1. CLIGenix: Natural Language to Bash Command Translator
-[Date: Sept'25 – Nov'25]
 [GitHub URL: https://github.com/abandonedmonk/CLIGenix]
 [Tech Stack: Python, Typer, Ollama, Cohere, Hugging Face TRL, Unsloth, PEFT/LoRA, GGUF, Poetry, Serper]
 [Keywords: CLI tooling, LLM inference, Typer, Ollama, Cohere, quantization, fine-tuning, PEFT, LoRA, shell command generation]
-- Built a local LLM-powered command generation tool in Python and Typer, mapping complex user intent to valid shell syntax; implemented a constraint-guided fallback path via Serper search APIs for edge-case query retrieval.
-- Fine-tuned open-weight language models including TinyLlama-1.1B (achieving \textbf{74\%} accuracy) and Llama-3.2-3B (achieving \textbf{52\%} accuracy) on instruction-mapped Alpaca datasets using Unsloth and Hugging Face TRL.
-- Optimized memory footprints for multi-environment execution by compressing model tensors into 4-bit GGUF quantization levels, achieving rapid token generation on resource-constrained hardware with just \textbf{16GB} of RAM.
+- Developed a Typer-based CLI tool translating natural language into safe, low-latency Bash commands to enhance accessibility for non-expert Linux users.
+- Fine-tuned TinyLlama-1.1B, achieving **74\%** accuracy, and Llama-3.2-3B, achieving **52\%** accuracy, on the NL2SH dataset in Alpaca format using Unsloth and Hugging Face TRL.
+- Optimized inference for resource-constrained devices with **16GB** RAM and an i7 CPU by integrating GGUF quantization with Ollama for fast CPU/GPU execution.
 
 ### What the repo actually contains
 The repo packages a Python CLI around LLM-backed command generation. `cligenix/cli.py` exposes a Typer command that accepts natural-language queries, lets the user choose between Cohere and Ollama, and prints the generated shell command. `cligenix/llm.py` applies a constrained system prompt, routes queries to Cohere or a local Ollama model, and triggers a Serper-backed search fallback when the model is unsure.

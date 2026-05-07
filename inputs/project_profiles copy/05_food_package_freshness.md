@@ -1,11 +1,10 @@
 1. Food Package and Freshness Detection
-[Date: Nov'24 – Dec'24]
 [GitHub URL: https://github.com/abandonedmonk/Food-Package-and-Freshness-Detection]
 [Tech Stack: Python, Streamlit, YOLO, OpenCV, Groq, Vision-Language Models, OCR]
 [Keywords: multimodal AI, YOLO, OpenCV, Streamlit, VLM, OCR, freshness detection, packaging analysis, computer vision]
-- Deployed a pipeline combining YOLO vision networks with LLaMA capabilities to process product freshness assessments, achieving a robust \textbf{90\%} prediction accuracy.
-- Coupled localized visual tracking heuristics with zero-shot text parsers, translating unstructured video streams into categorized JSON representations of target items.
-- Built queue-based asynchronous data handlers allowing real-time video processing to fire separate inference workloads without blocking central execution loops.
+- Built a cross-modal computer vision system integrating YOLO object detection and LLaMA to analyze raw food freshness and product packaging, achieving **90\%** accuracy.
+- Engineered an interactive multimodal pipeline to bridge visual classification of ripeness stages with generative NLP for structured data extraction.
+- Extracted key product details including brand, ingredients, nutrition, expiry dates, and allergen warnings from complex, unstructured visual inputs.
 
 ### What the repo actually contains
 The project is implemented as a Streamlit application that switches between tomato freshness analysis and packet analysis. It loads separate YOLO models for tomatoes and packets, uses a center-point tracker for packet identities, crops packet detections, converts them to base64 images, and sends them to a Groq-hosted vision model for packaging detail extraction. Output artifacts are stored in a `results/` directory as text reports.

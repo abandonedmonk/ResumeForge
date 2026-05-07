@@ -14,7 +14,8 @@ class CohereCommandR(BaseLLM):
             "COHERE_API_KEY",
             "COHERE_API_KEY is missing. Add it to your .env file to use Cohere fallback.",
         )
-        self.client = ChatCohere(cohere_api_key=self.api_key, model="command-r", temperature=0.4)
+        self.model = self.config.get("cohere_model", "command-r")
+        self.client = ChatCohere(cohere_api_key=self.api_key, model=self.model, temperature=0.4)
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         try:
