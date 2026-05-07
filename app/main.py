@@ -330,70 +330,70 @@ def build_ui() -> gr.Blocks:
                 gr.Markdown("Generate a fully custom LaTeX resume tailored line-by-line to a JD.")
                 with gr.Row():
                     with gr.Column():
-                # ── Job Description input ──────────────────────────────────
-                with gr.Accordion("📋 Paste Job Description", open=False):
-                    gr.Markdown(
-                        "Paste the full JD text here. Leave blank to use the default JD file from config: "
-                        f"`{resolve_path(config.get('default_jd_txt', 'N/A'))}`"
-                    )
-                    jd_text_input = gr.Textbox(
-                        label="Job Description",
-                        placeholder="Paste the job description here…",
-                        lines=14,
-                        max_lines=40,
-                    )
-                    clear_jd_button = gr.Button("🗑️ Clear JD", size="sm", variant="secondary")
-                    clear_jd_button.click(fn=lambda: "", outputs=jd_text_input)
+                        # ── Job Description input ──────────────────────────────────
+                        with gr.Accordion("📋 Paste Job Description", open=False):
+                            gr.Markdown(
+                                "Paste the full JD text here. Leave blank to use the default JD file from config: "
+                                f"`{resolve_path(config.get('default_jd_txt', 'N/A'))}`"
+                            )
+                            jd_text_input = gr.Textbox(
+                                label="Job Description",
+                                placeholder="Paste the job description here…",
+                                lines=14,
+                                max_lines=40,
+                            )
+                            clear_jd_button = gr.Button("🗑️ Clear JD", size="sm", variant="secondary")
+                            clear_jd_button.click(fn=lambda: "", outputs=jd_text_input)
 
-                # ── Other inputs ───────────────────────────────────────────
-                gr.Markdown(f"Template: `{resolve_path(config['default_resume_tex'])}`")
-                gr.Markdown(f"Projects Inventory: `{resolve_path(config['default_projects_md'])}`")
-                output_folder = gr.Textbox(
-                    label="Output Folder",
-                    value=str(resolve_path(config.get("default_output_folder", "outputs"))),
-                )
-                stage1_model = gr.Dropdown(
-                    label="Stage 1 Model (Selection)",
-                    choices=["groq", "openrouter", "cohere", "copilot"],
-                    value=config.get("stage1_model", "groq"),
-                )
-                stage2_model = gr.Dropdown(
-                    label="Stage 2 Model (Writing)",
-                    choices=["groq", "cohere", "openrouter", "copilot"],
-                    value=config.get("stage2_model", "groq"),
-                )
-                enrich_toggle = gr.Checkbox(
-                    label="Enrich with web search",
-                    value=bool(config.get("enrich_with_web_search", False)),
-                )
-                gr.Markdown(f"Using root skill file: `{resolve_path(config['default_skills_md'])}`")
-                run_button = gr.Button("Generate Preview", variant="primary")
-
-            with gr.Column():
-                ats_badge = gr.HTML()
-                with gr.Tabs():
-                    with gr.Tab("ATS Analysis"):
-                        ats_analysis = gr.Markdown()
-                    with gr.Tab("Changes Made"):
-                        changes_md = gr.Markdown()
-                    with gr.Tab("LaTeX Preview"):
-                        latex_preview = gr.Code(language="latex", lines=24)
-                        edit_request = gr.Textbox(
-                            label="Ask AI to edit this preview",
-                            placeholder="Example: Make the bullets more concise and emphasize backend APIs.",
-                            lines=3,
+                        # ── Other inputs ───────────────────────────────────────────
+                        gr.Markdown(f"Template: `{resolve_path(config['default_resume_tex'])}`")
+                        gr.Markdown(f"Projects Inventory: `{resolve_path(config['default_projects_md'])}`")
+                        output_folder = gr.Textbox(
+                            label="Output Folder",
+                            value=str(resolve_path(config.get("default_output_folder", "outputs"))),
                         )
-                        apply_edit_button = gr.Button("Apply AI Edit")
-                        edit_status = gr.Textbox(label="Edit Status", lines=2)
-                    with gr.Tab("Preview PDF"):
-                        pdf_file = gr.File(label="Preview PDF", type="filepath")
-                    with gr.Tab("Logs"):
-                        log_preview = gr.Textbox(label="Run Log", lines=18)
-                status_box = gr.Textbox(label="Status Log", lines=10)
-                error_box = gr.Textbox(label="Errors", lines=8)
-                save_button = gr.Button("Approve & Save PDF")
-                save_status = gr.Textbox(label="Save Status", lines=2)
-                saved_pdf_file = gr.File(label="Saved PDF", type="filepath")
+                        stage1_model = gr.Dropdown(
+                            label="Stage 1 Model (Selection)",
+                            choices=["groq", "openrouter", "cohere", "copilot"],
+                            value=config.get("stage1_model", "groq"),
+                        )
+                        stage2_model = gr.Dropdown(
+                            label="Stage 2 Model (Writing)",
+                            choices=["groq", "cohere", "openrouter", "copilot"],
+                            value=config.get("stage2_model", "groq"),
+                        )
+                        enrich_toggle = gr.Checkbox(
+                            label="Enrich with web search",
+                            value=bool(config.get("enrich_with_web_search", False)),
+                        )
+                        gr.Markdown(f"Using root skill file: `{resolve_path(config['default_skills_md'])}`")
+                        run_button = gr.Button("Generate Preview", variant="primary")
+
+                    with gr.Column():
+                        ats_badge = gr.HTML()
+                        with gr.Tabs():
+                            with gr.Tab("ATS Analysis"):
+                                ats_analysis = gr.Markdown()
+                            with gr.Tab("Changes Made"):
+                                changes_md = gr.Markdown()
+                            with gr.Tab("LaTeX Preview"):
+                                latex_preview = gr.Code(language="latex", lines=24)
+                                edit_request = gr.Textbox(
+                                    label="Ask AI to edit this preview",
+                                    placeholder="Example: Make the bullets more concise and emphasize backend APIs.",
+                                    lines=3,
+                                )
+                                apply_edit_button = gr.Button("Apply AI Edit")
+                                edit_status = gr.Textbox(label="Edit Status", lines=2)
+                            with gr.Tab("Preview PDF"):
+                                pdf_file = gr.File(label="Preview PDF", type="filepath")
+                            with gr.Tab("Logs"):
+                                log_preview = gr.Textbox(label="Run Log", lines=18)
+                        status_box = gr.Textbox(label="Status Log", lines=10)
+                        error_box = gr.Textbox(label="Errors", lines=8)
+                        save_button = gr.Button("Approve & Save PDF")
+                        save_status = gr.Textbox(label="Save Status", lines=2)
+                        saved_pdf_file = gr.File(label="Saved PDF", type="filepath")
 
         state_store = gr.State({})
 
