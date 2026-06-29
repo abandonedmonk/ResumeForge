@@ -1,0 +1,103 @@
+# Resume Style Guide — Your Name
+
+> Copy this file to `examples/my_profile/skills.md` (gitignored) and edit it with your
+> real identity, voice, and skills. ResumeForge feeds this guide to the LLM on every
+> rewrite. `config.yaml` points `default_skills_md` here so a fresh clone runs out of
+> the box; your personal copy is picked up via `config.local.yaml`.
+
+## Who I Am (inject this context into every rewrite)
+
+One or two sentences on your core identity — the role you target and what makes you
+credible. Example: *Final-year CS student and backend engineer who ships production
+systems — APIs, data pipelines, and ML services — not just prototypes.*
+
+---
+
+## What the LLM Is Allowed to Touch
+
+| Section | Rule |
+|---|---|
+| Heading summary (one-liner) | **TAILOR** — rewrite for every role |
+| Skills section | **TAILOR** — reorder, emphasize relevant ones first |
+| Experience bullets | **TAILOR** — reword keywords, keep all metrics |
+| Project bullets | **TAILOR** — reword keywords, reorder by relevance |
+| Education, Achievements, Contact | **FIXED** — never touch |
+| Any `\textbf{}`-wrapped metric | **FIXED** — never remove or change the number |
+| Project / certificate links | **FIXED** — never change URLs |
+
+---
+
+## Bullet Writing Rules (Non-Negotiable)
+
+### Structure: Impact → Method → Scale
+Every bullet: **what was achieved → how → how big**.
+
+❌ Bad: `Worked on building a search feature.`
+✅ Good: `Built a full-text search service (Postgres + OpenSearch) cutting query latency to 40ms across 2M documents.`
+
+### Metrics & Contextual Bolding
+- Every number in the original bullet MUST appear in the rewrite. Never round or invent a metric.
+- Bold the **entire outcome phrase or tool name**, never a naked number.
+  - ❌ Weak: `reduced latency by \textbf{40ms}`
+  - ✅ Strong: `\textbf{reduced p99 latency to 40ms}`
+- If a bullet has no metric, don't fabricate one.
+
+### Action Verbs
+- Start every bullet with a strong past-tense verb; never repeat a verb in one section.
+- Preferred: `Built`, `Designed`, `Implemented`, `Optimized`, `Deployed`, `Automated`, `Scaled`, `Integrated`, `Benchmarked`.
+- Banned openers: `Worked on`, `Helped with`, `Was responsible for`, `Assisted in`.
+
+### Length & Tone
+- Max 2 lines per bullet (~200 chars). One idea per bullet.
+- Tone: senior engineer — direct, technical, no buzzwords (`leveraged`, `synergy`, `cutting-edge`, `passionate`). No first person, no exclamation marks.
+
+---
+
+## Keyword Injection Rules (ATS)
+- **Strategic placement:** move the most important JD keywords into the summary, skills block, and the first bullet of your most recent role.
+- **Natural integration:** swap in the JD's terminology only where it fits the bullet's real meaning.
+- **Show, don't tell:** anchor soft keywords to a concrete tool/metric (not "scalability" alone).
+- **No stuffing / no misrepresentation:** never add a keyword for something you didn't do.
+- **Terminology mapping:** map vague JD concepts to your exact tools (e.g. "containers" → `Docker`, "evals" → your eval framework).
+
+---
+
+## Project Ordering & Selection Logic
+- Pick the projects (the template's content budget decides how many) that best match the target role.
+- Rank by: (1) domain match, (2) tech-stack overlap with the JD, (3) recency, (4) metric strength.
+
+---
+
+## Skills Section Ordering
+- Lead with the category most relevant to the JD.
+- **Full skills inventory (use only what's genuine — replace with yours):**
+    * **Languages:** Python, JavaScript/TypeScript, SQL, Go, Java
+    * **Backend & Data:** FastAPI, Node.js, PostgreSQL, Redis, Kafka
+    * **ML / AI:** PyTorch, scikit-learn, Hugging Face, RAG, LangChain
+    * **Cloud & DevOps:** AWS, Docker, Kubernetes, GitHub Actions, Terraform
+    * **Frontend:** React, Next.js, Tailwind CSS
+- *Do not add skills you haven't used. Do not fabricate tools.*
+
+---
+
+## One-Line Summary Rules (Heading)
+- Exactly one sentence, max ~30 words.
+- Name the specific role domain (not generic "software engineering").
+- Mention 1–2 concrete things you've built; end with what you bring to the role.
+
+Template: `{Domain} engineer with hands-on experience {thing 1} and {thing 2}, seeking to {what you bring} at {company/role type}.`
+
+---
+
+## What NOT to Do (Hard Rules)
+- Never hallucinate a project, employer, date, or publication.
+- Never change a URL, a metric, or the Education/Achievements/Contact sections.
+- Never use passive voice (`was built`, `was implemented`).
+
+---
+
+## Output Shape for ResumeForge
+- The AI chooses the headline, skills ordering/content, and project selection from the JD.
+- It outputs **plain text with `**bold**` markers** for skills/projects — Python formats the final LaTeX (the AI never writes LaTeX).
+- Skills are returned as ordered categories with ordered items; project selection briefly explains why each chosen project fits.
+- Keep every fact grounded in this guide and the supplied project inventory.

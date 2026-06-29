@@ -5,7 +5,6 @@ from datetime import datetime
 
 from app.utils.config import get_config
 
-
 WINDOWS_RESERVED = re.compile(r'[<>:"/\\|?*]+')
 
 

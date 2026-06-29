@@ -8,7 +8,6 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-
 ROOT_DIR = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT_DIR / "config.yaml"
 # Optional gitignored override for personal values (candidate_name, dest_folder, ...).

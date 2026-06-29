@@ -1,5 +1,7 @@
 # ResumeForge — Master Plan (Execution-Ready)
 
+> **Historical** — this was the original Phase 1–5 execution plan. Phases 6–8 shipped afterward; see [ROADMAP.md](ROADMAP.md) for current status and [../CHANGELOG.md](../CHANGELOG.md) for what landed.
+
 > **Goal:** Turn ResumeForge into a GitHub-star-worthy repo.
 > **Principle:** Free-tier only. Zero GPU. Zero cost. Works for everyone.
 > **Audience for this doc:** Another AI agent or developer picking this up to execute.

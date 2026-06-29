@@ -34,6 +34,8 @@ scratch/
 
 # Personal profile (kept local, not published)
 examples/my_profile/
+# Personal style guide — copy examples/skills.md.example to your own and keep it local
+/skills.md
 
 # IDE / OS
 .idea/

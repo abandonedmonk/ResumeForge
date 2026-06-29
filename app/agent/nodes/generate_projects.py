@@ -4,7 +4,7 @@ import json
 
 from app.agent.state import ResumeState
 from app.llm.router import RoutedModel
-from app.prompts.generate_personalization import build_selection_prompt, build_generation_prompt
+from app.prompts.generate_personalization import build_generation_prompt, build_selection_prompt
 from app.utils.config import get_config
 from app.utils.json_utils import extract_json_blob
 from app.utils.logger import log_error, log_status

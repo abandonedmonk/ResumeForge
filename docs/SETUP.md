@@ -58,6 +58,19 @@ the templates use. Nothing to do here unless you prefer to manage TeX yourself.
 6. In `config.yaml`: set `stage2_model: "copilot"`
 7. This gives you access to: GPT-4o, Claude Sonnet 4.5, Mistral Large — free with your Pro plan
 
+### Free vs Premium tier
+
+- **Free (default, `model_tier: free`):** any one free key works; ResumeForge cascades across providers and rotates multiple keys (`GROQ_API_KEY`, `GROQ_API_KEY_1`, …) to dodge rate limits.
+- **Premium (`model_tier: premium`):** add `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` (in `.env` or pasted into the UI — session keys are never persisted). The premium chain prefers GPT/Claude, then falls back to free providers.
+
+### Building your profile (no input files to hand-edit)
+
+You don't need to author `skills.md`/projects/résumé by hand. In the app:
+- **Build Profile from GitHub** — paste repo URLs; ResumeForge reads each README into a project profile.
+- **Build My Profile** — fill the forms, or upload an existing résumé **PDF** to auto-fill them.
+
+Copy `examples/skills.md.example` to your own gitignored `examples/my_profile/skills.md` and point `default_skills_md` at it in `config.local.yaml` to customize the writing style.
+
 ---
 
 ## First-Time Setup (one command)

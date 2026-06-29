@@ -80,6 +80,8 @@ def load_inputs(state: ResumeState) -> ResumeState:
             state[field_name] = _load_value(str(value))  # type: ignore[index]
         except FileNotFoundError as exc:
             log_error(state, f"{field_name}: {exc}")
+            if field_name == "skills_md":
+                log_error(state, "Hint: copy examples/skills.md.example to your own skills file and set default_skills_md (e.g. in config.local.yaml).")
             state[field_name] = "" if field_name != "projects_context" else {}  # type: ignore[index]
 
     # If the user imported GitHub-derived profiles, that directory transparently
