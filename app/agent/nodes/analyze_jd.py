@@ -25,7 +25,7 @@ def analyze_jd(state: ResumeState) -> ResumeState:
 
     try:
         system_prompt, user_prompt = build_analyze_jd_prompt(state["jd_text"], state["skills_md"])
-        response = RoutedModel("stage1").call(system_prompt, user_prompt)
+        response = RoutedModel("stage1", task="analyze_jd").call(system_prompt, user_prompt)
         payload = json.loads(extract_json_blob(response))
         analysis.update(payload)
     except Exception as exc:

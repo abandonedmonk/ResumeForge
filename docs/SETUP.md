@@ -25,43 +25,15 @@ the templates use. Nothing to do here unless you prefer to manage TeX yourself.
 
 ## Getting Your Free API Keys
 
-### 🔑 Gemini Flash (Required — Stage 1 ATS brain)
-1. Go to https://aistudio.google.com/apikey
-2. Sign in with Google account
-3. Click "Create API Key"
-4. Copy it → paste into `.env` as `GOOGLE_API_KEY=...`
-5. Free tier: **1,500 requests/day**, **1 million tokens/minute** — more than enough
+You only need **one** key to start. The full guide — which provider to pick, free limits, where to get each key, and the smart routing/token rules — lives in **[PROVIDERS.md](PROVIDERS.md)**.
 
-### 🔑 OpenRouter (Required — Stage 2 prose polish)
-1. Go to https://openrouter.ai/
-2. Sign up (free)
-3. Go to Keys → Create Key
-4. Copy it → paste into `.env` as `OPENROUTER_API_KEY=...`
-5. Free tier: Free models available (Mistral 7B, Llama 3.1, Gemma 2) — no credit card needed
-   - Look for models with `:free` suffix at https://openrouter.ai/models?q=free
+Quick version:
 
-### 🔑 Cohere (Optional — fallback if OpenRouter is rate-limited)
-1. Go to https://dashboard.cohere.com/
-2. Sign up → verify email
-3. Go to API Keys → copy trial key
-4. Paste into `.env` as `COHERE_API_KEY=...`
-5. Free trial: **1,000 API calls/month**
+- **Minimal free:** `GROQ_API_KEY` ([console.groq.com](https://console.groq.com)) — Groq does everything.
+- **Best free (recommended):** add `GOOGLE_API_KEY` ([aistudio.google.com/apikey](https://aistudio.google.com/apikey)) so Gemini handles ATS scoring + big prompts, and optionally `OPENROUTER_API_KEY` as a third fallback. Rotate rate limits with `GROQ_API_KEY_1`, `GROQ_API_KEY_2`, …
+- **Premium:** add `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` and set `model_tier: premium` (in `.env` or pasted in the UI — session keys are never persisted).
 
-### 🔑 GitHub Models API (Optional — Copilot Pro upgrade)
-> Use this if you want GPT-4o or Claude Sonnet quality for Stage 2 using your existing Copilot Pro subscription
-
-1. Go to https://github.com/settings/tokens
-2. Click "Generate new token (classic)"
-3. Scopes: check `models:read` (under "GitHub Models" section — may show as "Access GitHub Models APIs")
-4. Generate → copy token
-5. Paste into `.env` as `GITHUB_TOKEN=ghp_...`
-6. In `config.yaml`: set `stage2_model: "copilot"`
-7. This gives you access to: GPT-4o, Claude Sonnet 4.5, Mistral Large — free with your Pro plan
-
-### Free vs Premium tier
-
-- **Free (default, `model_tier: free`):** any one free key works; ResumeForge cascades across providers and rotates multiple keys (`GROQ_API_KEY`, `GROQ_API_KEY_1`, …) to dodge rate limits.
-- **Premium (`model_tier: premium`):** add `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` (in `.env` or pasted into the UI — session keys are never persisted). The premium chain prefers GPT/Claude, then falls back to free providers.
+ResumeForge auto-detects which keys you have and routes each task to the best available provider; the live routing shows in the run **Logs** and the UI's **🧭 Providers & Routing** panel.
 
 ### Building your profile (no input files to hand-edit)
 

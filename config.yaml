@@ -28,6 +28,21 @@ openai_model: "gpt-4o"             # premium tier
 anthropic_model: "claude-sonnet-4-6"  # premium tier
 anthropic_max_tokens: 4096
 
+# Task-aware routing (auto by default): each pipeline task is sent to the best
+# provider that actually has a key. Defaults — analyze_jd→groq · ats_scoring→gemini
+# · project_selection→groq · project_generation→groq · tailor→groq · cover_letter→groq
+# · report→groq. Override a task by naming a provider; the tier chain stays as fallback.
+# task_routing:
+#   ats_scoring: gemini
+#   project_generation: gemini   # e.g. let Gemini write when bodies are large
+#
+# Per-model token budgets (effective FREE-tier per-request caps, not raw context).
+# The router skips to a bigger-context model before trimming, and caps output so the
+# total stays under the limit. Raise these for paid tiers. Empty = built-in defaults.
+# model_limits:
+#   llama-3.3-70b-versatile: { max_input_tokens: 10000, max_output_tokens: 2048 }
+#   gemini-2.5-flash: { max_input_tokens: 120000, max_output_tokens: 4096 }
+
 # === Inputs ===
 # Neutral starter style guide (tracked). Copy examples/skills.md.example to your own
 # gitignored skills file and point default_skills_md at it via config.local.yaml.

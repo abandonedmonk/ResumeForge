@@ -59,7 +59,7 @@ def _semantic_context_score(keywords: list[str], bullets: list[str], skills_text
 
     try:
         system_prompt, user_prompt = build_semantic_score_prompt(keywords, bullets, skills_text)
-        response = RoutedModel("stage1").call(system_prompt, user_prompt, temperature=0.1)
+        response = RoutedModel("stage1", task="ats_scoring").call(system_prompt, user_prompt, temperature=0.1)
         payload = json.loads(extract_json_blob(response))
         contextual = [keyword for keyword, verdict in payload.get("keyword_results", {}).items() if verdict == "contextual"]
         name_dropped = [keyword for keyword, verdict in payload.get("keyword_results", {}).items() if verdict == "name_dropped"]

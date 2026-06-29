@@ -45,11 +45,15 @@ flowchart TD
 
 ## LLM layer ([`app/llm/`](../app/llm/))
 
-`RoutedModel(stage, tier)` ([`router.py`](../app/llm/router.py)) is the single entry point for every LLM call. `stage` is `stage1` (reasoning) or `stage2` (writing); `tier` selects a provider chain:
+`RoutedModel(stage, tier, task)` ([`router.py`](../app/llm/router.py)) is the single entry point for every LLM call. `stage` is `stage1` (reasoning) or `stage2` (writing); `tier` selects a provider chain:
 
 - **free** (default): `groq → openrouter → gemini → cohere → copilot`
 - **premium**: `openai → anthropic → gemini → groq` (bring your own key)
 - **custom**: your `fallback_chain`
+
+**Task-aware routing** ([`task_routing.py`](../app/llm/task_routing.py)): the optional `task` argument (`ats_scoring`, `project_generation`, `tailor`, …) reorders the chain so each job goes to the best provider that actually has a key — e.g. Gemini scores ATS while Groq writes — filtered to live providers via `keypool.available_providers`, with the tier chain as fallback. `task=None` keeps the original two-stage behavior exactly.
+
+**Token-budget awareness** ([`model_limits.py`](../app/llm/model_limits.py)): each model has an effective free-tier input/output budget. `RoutedModel.call` estimates the prompt, **skips to a bigger-context model** when the preferred one won't fit, and **trims the input only as a last resort** (with a visible marker + WARN). Output is capped per model so the *total* stays under limits (Groq's free tier is ~12k total per request). See [PROVIDERS.md](PROVIDERS.md) for the user-facing guide.
 
 For each provider, `keypool.ordered_keys` ([`keypool.py`](../app/llm/keypool.py)) yields every available key (`NAME`, `NAME_1`, … plus a UI session key from [`keystore.py`](../app/llm/keystore.py)), rotating the start offset and backing off on rate limits before failing over to the next provider. Adding a provider = a `BaseLLM` subclass + an entry in `_PROVIDERS` and `PROVIDER_ENV`.
 

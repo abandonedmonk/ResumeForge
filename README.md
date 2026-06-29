@@ -15,6 +15,7 @@ Paste a job description (or a posting URL). ResumeForge picks your most relevant
 ## Why ResumeForge
 
 - **100% free to run** — cascades across free LLM providers (Groq → OpenRouter → Gemini → Cohere → GitHub Models) with **multi-key rotation + backoff** to dodge rate limits. No paid key required.
+- **Smart, token-aware routing** — sends each task to the right model (Groq writes, Gemini scores ATS), auto-detected from the keys you have; oversized prompts skip to a bigger-context model and trim only as a last resort, so a free Groq key never hits its token cap. ([details](docs/PROVIDERS.md))
 - **Premium-ready** — bring your own GPT / Claude / paid Gemini key (via `.env` or pasted in the UI) and flip `model_tier: premium`.
 - **Strictly one page** — a deterministic condense loop trims to fit, then AI polishes; auto-allows a 2nd page only for 10+ years of experience or an explicit opt-in.
 - **You never write LaTeX** — the AI emits content with `**bold**` markers; Python owns all LaTeX assembly. Vetted one-page templates (`classic`, `modern`).
@@ -49,7 +50,7 @@ First run creates the venv, installs dependencies, and — if `pdflatex` isn't a
 
 **Docker:** `cp .env.example .env` then `docker compose up --build` → `http://localhost:7860`.
 
-Get a free key in ~1 minute: [Groq](https://console.groq.com) · [Google AI Studio](https://aistudio.google.com/apikey) · [OpenRouter](https://openrouter.ai/keys) · [Cohere](https://dashboard.cohere.com).
+Get a free key in ~1 minute: [Groq](https://console.groq.com) · [Google AI Studio](https://aistudio.google.com/apikey) · [OpenRouter](https://openrouter.ai/keys) · [Cohere](https://dashboard.cohere.com). One key is enough — see **[which key to pick & how routing works](docs/PROVIDERS.md)**.
 
 ## How it works
 
@@ -77,7 +78,7 @@ Your personal data stays local (gitignored `examples/my_profile/`); the repo shi
 
 ## Documentation
 
-- [Setup guide](docs/SETUP.md) · [Linux setup](docs/linux_setup.md)
+- [Setup guide](docs/SETUP.md) · [Providers & API keys](docs/PROVIDERS.md) · [Linux setup](docs/linux_setup.md)
 - [Architecture](docs/ARCHITECTURE.md) · [File structure](docs/FILE_STRUCTURE.md)
 - [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 

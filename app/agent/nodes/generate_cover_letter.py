@@ -29,7 +29,7 @@ def generate_cover_letter(state: ResumeState) -> ResumeState:
         system_prompt, user_prompt = build_cover_letter_prompt(
             state["skills_md"], state.get("jd_analysis", {}), highlights
         )
-        response = RoutedStage2Model().call(system_prompt, user_prompt)
+        response = RoutedStage2Model(task="cover_letter").call(system_prompt, user_prompt)
         cleaned = response.strip().replace("```markdown", "").replace("```", "").strip()
         state["cover_letter_md"] = cleaned
         log_status(state, "Cover letter ready.")

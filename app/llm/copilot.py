@@ -19,15 +19,19 @@ class CopilotModels(BaseLLM):
         self.client = OpenAI(base_url="https://models.inference.ai.azure.com", api_key=self.api_key)
         self.model = self.config.get("copilot_model", "gpt-4o")
 
-    def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
+    def call(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.4, max_tokens: int | None = None
+    ) -> str:
         try:
+            kwargs = {"model": self.model, "temperature": temperature}
+            if max_tokens:
+                kwargs["max_tokens"] = max_tokens
             response = self.client.chat.completions.create(
-                model=self.model,
-                temperature=temperature,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
+                **kwargs,
             )
             if not response.choices or response.choices[0].message.content is None:
                 raise LLMError("Copilot returned an empty response.")

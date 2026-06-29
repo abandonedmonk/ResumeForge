@@ -68,7 +68,7 @@ def generate_report(state: ResumeState) -> ResumeState:
         log_status(state, state["optimization_summary"])
     try:
         system_prompt, user_prompt = build_report_prompt(state["changes_log"], state.get("ats_score"))
-        report = RoutedStage2Model().call(system_prompt, user_prompt)
+        report = RoutedStage2Model(task="report").call(system_prompt, user_prompt)
     except Exception as exc:
         log_error(state, f"Falling back to local report generation: {exc}")
         report = _fallback_report(state["changes_log"], state.get("ats_score"))

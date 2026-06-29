@@ -24,14 +24,19 @@ class GeminiFlash(BaseLLM):
             google_api_key=self.api_key,
         )
 
-    def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
+    def call(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.3, max_tokens: int | None = None
+    ) -> str:
         try:
+            kwargs = {"temperature": temperature}
+            if max_tokens:
+                kwargs["max_output_tokens"] = max_tokens
             response = self.client.invoke(
                 [
                     ("system", system_prompt),
                     ("human", user_prompt),
                 ],
-                temperature=temperature,
+                **kwargs,
             )
             if response.content is None:
                 raise LLMError("Gemini returned an empty response.")

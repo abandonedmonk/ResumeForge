@@ -36,5 +36,11 @@ class BaseLLM(abc.ABC):
         return LLMError(str(exc))
 
     @abc.abstractmethod
-    def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
+    def call(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.3,
+        max_tokens: int | None = None,
+    ) -> str:
         ...
