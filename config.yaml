@@ -32,6 +32,10 @@ anthropic_max_tokens: 4096
 default_skills_md: "skills.md"
 default_jd_txt: "test_files/jd.txt"
 default_projects_md: "inputs/project_profiles"
+# GitHub Profile Builder: imported repo profiles land here (gitignored). When this
+# directory contains any *.md, it transparently replaces default_projects_md as the
+# projects source. Leave the bundled examples for onboarding only.
+imported_profiles_dir: "examples/my_profile/project_profiles"
 # Leave empty to use the bundled template chosen by `resume_template`. Set this
 # (e.g. in config.local.yaml) to your own personalized .tex to override.
 default_resume_tex: ""

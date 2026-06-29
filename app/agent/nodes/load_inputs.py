@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.agent.state import ResumeState
+from app.parsers.projects_parser import resolve_projects_source
 from app.parsers.template_registry import load_template
 from app.utils.config import get_config, resolve_path, update_session_overrides
 from app.utils.exceptions import ResumeForgeError
@@ -77,6 +78,14 @@ def load_inputs(state: ResumeState) -> ResumeState:
         except FileNotFoundError as exc:
             log_error(state, f"{field_name}: {exc}")
             state[field_name] = "" if field_name != "projects_context" else {}  # type: ignore[index]
+
+    # If the user imported GitHub-derived profiles, that directory transparently
+    # replaces the bundled/default projects source (locked: "imported replace bundled").
+    if isinstance(state.get("projects_context"), str):
+        resolved = resolve_projects_source(state["projects_context"])
+        if resolved != state["projects_context"]:
+            log_status(state, f"Using imported GitHub profiles: {resolved}")
+        state["projects_context"] = resolved
 
     if not state["jd_text"].strip():
         raise ResumeForgeError("Job description is empty — cannot proceed.")
