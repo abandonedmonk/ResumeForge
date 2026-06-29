@@ -5,8 +5,13 @@ import json
 from app.agent.state import ResumeState
 from app.llm.router import RoutedModel
 from app.prompts.generate_personalization import build_selection_prompt, build_generation_prompt
+from app.utils.config import get_config
 from app.utils.json_utils import extract_json_blob
 from app.utils.logger import log_error, log_status
+
+# changes_log sections that this node (re)writes each pass — pruned on retry so the
+# log reflects the latest generation rather than stacking duplicates per iteration.
+_OWNED_SECTIONS = {"Headline", "Skills", "Projects"}
 
 
 def _fallback_skills() -> list[dict[str, object]]:
@@ -55,6 +60,23 @@ def generate_projects(state: ResumeState) -> ResumeState:
         log_error(state, "Project inventory is empty. Projects section will remain blank.")
         return state
 
+    budget = get_config()
+    max_skills = int(budget.get("max_skills", 4))
+    max_projects = int(budget.get("max_projects", 3))
+    max_bullets = int(budget.get("max_bullets_per_project", 3))
+
+    # On an optimization retry the scorer has populated skills_gap / recommendations.
+    # Feed them in so the selection and writing target the real missing keywords.
+    is_retry = int(state.get("optimization_iteration", 0)) > 0
+    skills_gap = state.get("skills_gap") if is_retry else None
+    recommendations = state.get("ats_score", {}).get("recommendations") if is_retry else None
+    if is_retry:
+        log_status(state, "Optimization retry: regenerating to close the ATS keyword gap...")
+        state["changes_log"] = [
+            change for change in state["changes_log"]
+            if change.get("section") not in _OWNED_SECTIONS
+        ]
+
     try:
         # --- Stage 1: Selection (Reasoning) ---
         log_status(state, "Stage 1: Selecting best-fit projects and skill categories...")
@@ -62,6 +84,9 @@ def generate_projects(state: ResumeState) -> ResumeState:
             state["skills_md"],
             state["jd_analysis"],
             projects_context,
+            max_skills=max_skills,
+            max_projects=max_projects,
+            skills_gap=skills_gap,
         )
         sel_response = RoutedModel("stage1").call(sel_sys, sel_user)
         sel_payload = json.loads(extract_json_blob(sel_response))
@@ -94,6 +119,9 @@ def generate_projects(state: ResumeState) -> ResumeState:
             state["jd_analysis"],
             selected_projects_data,
             selected_skills,
+            max_bullets_per_project=max_bullets,
+            skills_gap=skills_gap,
+            recommendations=recommendations,
         )
         gen_response = RoutedModel("stage2").call(gen_sys, gen_user)
         gen_payload = json.loads(extract_json_blob(gen_response))
@@ -161,11 +189,6 @@ def generate_projects(state: ResumeState) -> ResumeState:
         }
 
     # Final cleanup and logging — honor the active template's content budget.
-    from app.utils.config import get_config
-
-    budget = get_config()
-    max_skills = int(budget.get("max_skills", 4))
-    max_projects = int(budget.get("max_projects", 3))
     state["generated_skills"] = state["generated_skills"][:max_skills]
     state["generated_projects"] = state["generated_projects"][:max_projects]
 

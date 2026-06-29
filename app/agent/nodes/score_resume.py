@@ -105,17 +105,24 @@ def _recommendations(scorecard: dict[str, object]) -> list[str]:
     return recommendations
 
 
-def score_resume(state: ResumeState) -> ResumeState:
-    log_status(state, "Scoring final resume for ATS match...")
-    resume_text = strip_latex_commands(state["final_tex"])
-    bullets = extract_resume_bullets(state["final_tex"])
+def compute_ats_score(
+    resume_tex: str,
+    jd_analysis: dict[str, Any],
+    state: ResumeState | None = None,
+    weights: dict[str, float] | None = None,
+) -> dict[str, Any]:
+    """Score a LaTeX resume against a JD analysis. Pure-ish: depends only on the two
+    inputs (plus config for weights/semantic toggle). ``state`` is used solely for
+    optional error logging; pass ``None`` to score silently (e.g. the baseline)."""
+    resume_text = strip_latex_commands(resume_tex)
+    bullets = extract_resume_bullets(resume_tex)
     synonym_map = build_synonym_map()
 
     base_keywords = _dedupe_keywords(
-        list(state["jd_analysis"].get("keywords", []))
-        + list(state["jd_analysis"].get("required_skills", []))
+        list(jd_analysis.get("keywords", []))
+        + list(jd_analysis.get("required_skills", []))
     )
-    enriched_keywords = _dedupe_keywords(list(state["jd_analysis"].get("enriched_keywords", [])))
+    enriched_keywords = _dedupe_keywords(list(jd_analysis.get("enriched_keywords", [])))
 
     matched = matched_keywords(base_keywords, resume_text, synonym_map)
     matched_enriched = matched_keywords(enriched_keywords, resume_text, synonym_map)
@@ -130,15 +137,15 @@ def score_resume(state: ResumeState) -> ResumeState:
         )
     )
 
-    sections = split_sections(state["final_tex"])
+    sections = split_sections(resume_tex)
     skills_text = strip_latex_commands(sections.get("Skills", ""))
 
     semantic = _semantic_context_score(base_keywords, bullets, skills_text)
-    if semantic.get("fallback") and semantic.get("error"):
+    if state is not None and semantic.get("fallback") and semantic.get("error"):
         log_error(state, f"ATS semantic scoring fallback used: {semantic['error']}")
 
-    section_quality = section_quality_snapshot(state["final_tex"])
-    zones = identify_high_value_zones(state["final_tex"])
+    section_quality = section_quality_snapshot(resume_tex)
+    zones = identify_high_value_zones(resume_tex)
     zone_weights = {"headline": 3.0, "skills": 2.0, "first_bullets": 1.5}
     weighted_hits = 0.0
     max_weight = float(len(base_keywords)) * sum(zone_weights.values())
@@ -153,11 +160,11 @@ def score_resume(state: ResumeState) -> ResumeState:
     impact_score = int(round(min(metrics_bullets / target_metrics, 1.0) * 100))
 
     missing_required = [
-        skill for skill in state["jd_analysis"].get("required_skills", [])
+        skill for skill in jd_analysis.get("required_skills", [])
         if not find_keyword_in_text(skill, resume_text, synonym_map)
     ]
     missing_nice = [
-        skill for skill in state["jd_analysis"].get("nice_to_have", [])
+        skill for skill in jd_analysis.get("nice_to_have", [])
         if not find_keyword_in_text(skill, resume_text, synonym_map)
     ]
     missing_enriched = [
@@ -165,7 +172,8 @@ def score_resume(state: ResumeState) -> ResumeState:
         if not find_keyword_in_text(skill, resume_text, synonym_map)
     ]
 
-    weights = {**DEFAULT_ATS_WEIGHTS, **get_config().get("ats_score_weights", {})}
+    if weights is None:
+        weights = {**DEFAULT_ATS_WEIGHTS, **get_config().get("ats_score_weights", {})}
     overall = int(
         round(
             keyword_score * weights["keyword_match"]
@@ -176,12 +184,12 @@ def score_resume(state: ResumeState) -> ResumeState:
         )
     )
 
-    state["skills_gap"] = {
+    skills_gap = {
         "missing_required": missing_required,
         "missing_nice_to_have": missing_nice,
         "missing_enriched": missing_enriched,
     }
-    state["ats_score"] = {
+    return {
         "overall": overall,
         "keyword_match": {
             "score": keyword_score,
@@ -202,7 +210,7 @@ def score_resume(state: ResumeState) -> ResumeState:
             "metrics_bullets": metrics_bullets,
             "total_bullets": len(bullets),
         },
-        "skills_gap": state["skills_gap"],
+        "skills_gap": skills_gap,
         "recommendations": _recommendations(
             {
                 "keyword_match": {"score": keyword_score},
@@ -213,6 +221,19 @@ def score_resume(state: ResumeState) -> ResumeState:
             }
         ),
     }
+
+
+def score_resume(state: ResumeState) -> ResumeState:
+    iteration = int(state.get("optimization_iteration", 0)) + 1
+    log_status(state, f"Scoring final resume for ATS match (pass {iteration})...")
+
+    ats_score = compute_ats_score(state["final_tex"], state["jd_analysis"], state)
+    overall = int(ats_score["overall"])
+
+    state["ats_score"] = ats_score
+    state["skills_gap"] = ats_score["skills_gap"]
+    state["optimization_iteration"] = iteration
+    state["optimization_scores"] = list(state.get("optimization_scores", [])) + [overall]
 
     label = "Strong Match" if overall >= 75 else "Moderate Match" if overall >= 50 else "Needs Work"
     state["ats_score_summary"] = f"{overall}% Match - {label}"

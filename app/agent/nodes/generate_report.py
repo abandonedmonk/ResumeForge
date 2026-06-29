@@ -3,7 +3,33 @@ from __future__ import annotations
 from app.agent.state import ResumeState
 from app.llm.router import RoutedStage2Model
 from app.prompts.generate_report import build_report_prompt
+from app.utils.config import get_config
 from app.utils.logger import log_error, log_status
+
+
+def _build_optimization_summary(state: ResumeState) -> str:
+    """One-line before->after verdict for the report banner. Honest about plateaus:
+    when the loop maxed out with gaps still open, it says to add a project."""
+    final_score = state.get("ats_score", {})
+    after = final_score.get("overall")
+    if after is None:
+        return ""
+    before = state.get("original_ats_score", {}).get("overall")
+    passes = int(state.get("optimization_iteration", 1)) or 1
+    threshold = int(get_config().get("auto_optimize_threshold", 80))
+    delta = f"{before}% -> {after}%" if before is not None else f"{after}%"
+
+    if after >= threshold:
+        return f"Optimized {delta} (target {threshold}%) over {passes} pass(es)."
+
+    missing = state.get("skills_gap", {}).get("missing_required", [])
+    if missing:
+        shown = ", ".join(missing[:6])
+        return (
+            f"Best achievable with your current projects: {after}% ({delta} over {passes} pass(es)). "
+            f"Still missing: {shown}. Add a project demonstrating these to score higher."
+        )
+    return f"Optimized {delta} over {passes} pass(es); {after}% is the best with the current projects."
 
 
 def _fallback_report(changes_log: list[dict], ats_score: dict | None = None) -> str:
@@ -37,10 +63,16 @@ def _fallback_report(changes_log: list[dict], ats_score: dict | None = None) -> 
 
 def generate_report(state: ResumeState) -> ResumeState:
     log_status(state, "Generating changes report...")
+    state["optimization_summary"] = _build_optimization_summary(state)
+    if state["optimization_summary"]:
+        log_status(state, state["optimization_summary"])
     try:
         system_prompt, user_prompt = build_report_prompt(state["changes_log"], state.get("ats_score"))
-        state["changes_report_md"] = RoutedStage2Model().call(system_prompt, user_prompt)
+        report = RoutedStage2Model().call(system_prompt, user_prompt)
     except Exception as exc:
         log_error(state, f"Falling back to local report generation: {exc}")
-        state["changes_report_md"] = _fallback_report(state["changes_log"], state.get("ats_score"))
+        report = _fallback_report(state["changes_log"], state.get("ats_score"))
+    if state["optimization_summary"]:
+        report = f"> **Optimization:** {state['optimization_summary']}\n\n{report}"
+    state["changes_report_md"] = report
     return state
