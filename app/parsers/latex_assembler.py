@@ -103,6 +103,7 @@ def format_skill_entries(generated_skills: list[dict[str, object]]) -> list[str]
 
 
 def format_project_entries(generated_projects: list[dict[str, object]]) -> str:
+    max_bullets = int(get_config().get("max_bullets_per_project", 3))
     blocks: list[str] = []
     for project in generated_projects:
         title = escape_latex(str(project.get("title", "")).strip())
@@ -124,7 +125,7 @@ def format_project_entries(generated_projects: list[dict[str, object]]) -> str:
             rf"    {{{heading_title}}}{{{date_range}}}",
             r"    \resumeItemListStart",
         ]
-        for bullet in bullets[:3]:
+        for bullet in bullets[:max_bullets]:
             lines.append(rf"      \resumeItem{{{bullet}}}")
         lines.append(r"    \resumeItemListEnd")
         blocks.append("\n".join(lines))

@@ -29,6 +29,13 @@ def set_session_overrides(overrides: dict[str, Any] | None) -> None:
     _session.overrides = dict(overrides or {})
 
 
+def update_session_overrides(overrides: dict[str, Any] | None) -> None:
+    """Merge additional keys into the current thread's session overrides."""
+    current = dict(getattr(_session, "overrides", {}))
+    current.update(overrides or {})
+    _session.overrides = current
+
+
 def clear_session_overrides() -> None:
     _session.overrides = {}
 
