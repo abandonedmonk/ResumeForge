@@ -29,7 +29,7 @@ def build_synonym_map() -> dict[str, set[str]]:
         "kubernetes": {"kubernetes", "k8s"},
     }
     synonym_map: dict[str, set[str]] = {}
-    for canonical, variants in groups.items():
+    for _canonical, variants in groups.items():
         normalized_variants = {normalize_keyword(variant) for variant in variants}
         for variant in normalized_variants:
             synonym_map[variant] = normalized_variants

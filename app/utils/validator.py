@@ -4,7 +4,6 @@ import re
 import unicodedata
 from collections.abc import Iterable
 
-
 LATEX_SPECIAL_CHARS = {
     "\\": r"\textbackslash{}",
     "&": r"\&",

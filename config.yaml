@@ -29,7 +29,9 @@ anthropic_model: "claude-sonnet-4-6"  # premium tier
 anthropic_max_tokens: 4096
 
 # === Inputs ===
-default_skills_md: "skills.md"
+# Neutral starter style guide (tracked). Copy examples/skills.md.example to your own
+# gitignored skills file and point default_skills_md at it via config.local.yaml.
+default_skills_md: "examples/skills.md.example"
 default_jd_txt: "test_files/jd.txt"
 default_projects_md: "inputs/project_profiles"
 # GitHub Profile Builder: imported repo profiles land here (gitignored). When this

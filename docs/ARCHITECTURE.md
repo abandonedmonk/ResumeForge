@@ -1,243 +1,70 @@
 # 🏗️ Architecture — ResumeForge
 
-## The Two-Stage LLM Pipeline (Core Insight)
+ResumeForge is a [LangGraph](https://github.com/langchain-ai/langgraph) agent wrapped in a Gradio UI. The AI writes **content only** (text with `**bold**` markers); Python owns all LaTeX assembly, scoring, and file I/O. This keeps output deterministic and lets any free LLM drive it.
 
-Your original manual workflow already had the right idea — two models, two jobs. ResumeForge automates exactly that.
+## Pipeline
 
-```
-                        ┌─────────────────────────────┐
-                        │      STAGE 1: ATS BRAIN      │
-                        │   Gemini 2.0 Flash (Free)    │
-                        │                              │
-                        │  • Parse JD → extract        │
-                        │    keywords, skills, tone    │
-                        │  • Score each existing       │
-                        │    bullet vs JD              │
-                        │  • Rewrite weak bullets      │
-                        │    with ATS keyword          │
-                        │    injection                 │
-                        └──────────┬──────────────────┘
-                                   │
-                                   ▼
-                        ┌─────────────────────────────┐
-                        │     STAGE 2: PROSE POLISH    │
-                        │  OpenRouter / Cohere (Free)  │
-                        │                              │
-                        │  • Takes Stage 1 bullets     │
-                        │  • Applies your skills.md    │
-                        │    style guide               │
-                        │  • Makes them sound human,   │
-                        │    punchy, impressive        │
-                        │  • Removes Gemini's          │
-                        │    "corporate robot" tone    │
-                        └──────────┬──────────────────┘
-                                   │
-                                   ▼
-                        ┌─────────────────────────────┐
-                        │      LATEX ASSEMBLER         │
-                        │         (No LLM)             │
-                        │                              │
-                        │  • Injects polished bullets  │
-                        │    back into .tex template   │
-                        │  • Preserves all formatting  │
-                        │  • Runs pdflatex             │
-                        │  • Auto-names + saves PDF    │
-                        └─────────────────────────────┘
+The graph is built in [`app/agent/graph.py`](../app/agent/graph.py) (`build_graph`), run via `run_agent(initial_state)` with `recursion_limit: 50` (the optimize loop revisits nodes).
+
+```mermaid
+flowchart TD
+    A[load_inputs] --> B[parse_resume] --> C[analyze_jd] --> D[score_original]
+    D --> E[enrich_company] --> F[generate_projects] --> G[tailor_sections]
+    G --> H[validate_output] --> I[assemble_latex] --> J[compile_pdf]
+    J -->|"_should_stop_after_compile: error"| Z([END])
+    J -->|ok| K[enforce_one_page] --> L[score_resume]
+    L -->|"_should_optimize: retry"| F
+    L -->|"_should_optimize: done"| M[generate_report]
+    M --> N[generate_cover_letter] --> O[generate_docx] --> P[save_and_display] --> Z
 ```
 
-### Why section-by-section processing?
+| Node | Role |
+|---|---|
+| `load_inputs` | Resolve JD / skills / projects / résumé template; apply config + session overrides; fetch JD-from-URL; prefer imported profiles & the personal template when present. |
+| `parse_resume` | Split the template into sections (`\section{}`) and bullets; parse project profiles. |
+| `analyze_jd` | LLM extracts required/nice-to-have skills, keywords, tone, role, company. |
+| `score_original` | Baseline ATS score of the untailored résumé (the "before"). |
+| `enrich_company` | Optional web-search context (off by default). |
+| `generate_projects` | Select + write project bullets grounded in each project's full body. |
+| `tailor_sections` | Two-stage rewrite of non-fixed sections: Stage 1 (reasoning, temp 0.2) for ATS/keywords, Stage 2 (writing, temp 0.4) for prose. |
+| `validate_output` | Structural checks; revert sections that fail (keep originals). |
+| `assemble_latex` | Inject headline/skills/projects + tailored bullets into the template placeholders. |
+| `compile_pdf` | Run `pdflatex` twice; parse the page count. |
+| `enforce_one_page` | Deterministically trim to the page budget, then optional AI shortening. |
+| `score_resume` | Re-score the tailored résumé; record the optimization scores. |
+| `generate_report` | Synthesize the before→after / changes report + `optimization_summary`. |
+| `generate_cover_letter` | Optional (flag-gated) cover letter from the tailored highlights. |
+| `generate_docx` | Clean ATS `.docx` rebuilt from the final content. |
+| `save_and_display` | Stage the preview; on approval, save PDF/DOCX/cover-letter to `dest_folder` + history. |
 
-This is how you never hit a token limit again. Instead of feeding the entire resume + JD + skills file + projects file to one model in one shot, each **section** (Experience 1, Experience 2, Project 1, etc.) is processed independently:
+**Conditional edges:** `_should_stop_after_compile` ends the run on a `pdflatex` failure; `_should_optimize` loops back to `generate_projects` while below the target score and still gaining, stopping on target met / plateau / `max_optimize_iterations` (so it always terminates).
 
-```
-Full Resume
-    │
-    ├── Experience: Internship at X  ──► Stage1 ──► Stage2 ──► polished bullets
-    ├── Experience: Project at Y     ──► Stage1 ──► Stage2 ──► polished bullets  
-    ├── Project: Project A           ──► Stage1 ──► Stage2 ──► polished bullets
-    └── Project: Project B           ──► Stage1 ──► Stage2 ──► polished bullets
-```
+## The two-stage rewrite
 
-Each call is tiny. Each call stays well within free tier limits. Parallelizable later.
+`tailor_sections` mirrors the manual "two models, two jobs" workflow: **Stage 1** (reasoning, low temp) restructures bullets for ATS keyword coverage; **Stage 2** (writing, higher temp) makes them read like a senior engineer wrote them. Processing section-by-section means no single call ever hits a token limit, and every original metric is preserved.
 
----
+## LLM layer ([`app/llm/`](../app/llm/))
 
-## LangGraph State Machine
+`RoutedModel(stage, tier)` ([`router.py`](../app/llm/router.py)) is the single entry point for every LLM call. `stage` is `stage1` (reasoning) or `stage2` (writing); `tier` selects a provider chain:
 
-```
-[LoadInputs]
-     │
-     ▼
-[ParseResume]  ← splits .tex into sections dict
-     │
-     ▼
-[AnalyzeJD]    ← single Gemini call: extract keywords, role level, company tone
-     │          → outputs: jd_keywords[], required_skills[], nice_to_have[], tone
-     ▼
-[TailorSection] ← loops over each section
-     │   ┌────────────────────────────────────┐
-     │   │  For each section:                 │
-     │   │   1. Gemini Flash → ATS rewrite    │
-     │   │   2. OpenRouter  → prose polish    │
-     │   │   3. Store diff (old vs new)       │
-     │   └────────────────────────────────────┘
-     │
-     ▼
-[ValidateOutput]  ← sanity checks: bullet count, LaTeX syntax, no hallucinated projects
-     │
-     ▼
-[AssembleLaTeX]   ← injects new bullets into original .tex
-     │
-     ▼
-[CompilePDF]      ← pdflatex subprocess
-     │
-     ▼
-[GenerateReport]  ← one LLM call: turn diffs into readable "what changed & why" markdown
-     │
-     ▼
-[SaveAndDisplay]  ← auto-name, save to output folder, return to Gradio
-```
+- **free** (default): `groq → openrouter → gemini → cohere → copilot`
+- **premium**: `openai → anthropic → gemini → groq` (bring your own key)
+- **custom**: your `fallback_chain`
 
-### LangGraph State (what travels between nodes)
+For each provider, `keypool.ordered_keys` ([`keypool.py`](../app/llm/keypool.py)) yields every available key (`NAME`, `NAME_1`, … plus a UI session key from [`keystore.py`](../app/llm/keystore.py)), rotating the start offset and backing off on rate limits before failing over to the next provider. Adding a provider = a `BaseLLM` subclass + an entry in `_PROVIDERS` and `PROVIDER_ENV`.
 
-```python
-class ResumeState(TypedDict):
-    # Inputs
-    jd_text: str
-    skills_md: str                    # Your style guide / skills file
-    projects_context: dict            # Name → description mapping
-    original_resume_tex: str
-    output_folder: str
-    
-    # Intermediate
-    jd_analysis: dict                 # keywords, tone, role_level, company_name, role_title
-    resume_sections: dict             # section_name → {header, bullets, raw_tex}
-    tailored_sections: dict           # section_name → {new_bullets, reasoning}
-    changes_log: list[dict]           # [{section, old, new, reasoning}]
-    
-    # Outputs
-    final_tex: str
-    final_pdf_path: str
-    changes_report_md: str
-    errors: list[str]
-```
+## Config ([`app/utils/config.py`](../app/utils/config.py))
 
----
+Layered, last wins: `config.yaml` (tracked defaults) → `config.local.yaml` (gitignored personal values) → per-thread session overrides (UI selections). `get_config()` returns a deepcopy so concurrent Gradio sessions stay isolated.
 
-## Prompt Architecture
+## Ingestion (Phases 5–7)
 
-### System Prompt (injected into EVERY call)
-Your `skills.md` is the foundation. It goes into the system prompt of every single LLM call, not just one. This is the "secret sauce" from the original plan — it ensures consistent voice regardless of which model is doing the writing.
+- **GitHub** ([`integrations/github.py`](../app/integrations/github.py), `profile_builder.py`): repo URL → README → grounded project profile (`.md`).
+- **Résumé PDF** ([`integrations/resume_pdf.py`](../app/integrations/resume_pdf.py), `resume_import.py`): text + link extraction → LLM → structured `Profile`.
+- **Profile → template** ([`parsers/profile_template_builder.py`](../app/parsers/profile_template_builder.py)): renders a personal one-page `template.tex` from the `Profile` ([`profiles/schema.py`](../app/profiles/schema.py)), self-checked by compiling.
+- **JD-from-URL** ([`parsers/jd_parser.py`](../app/parsers/jd_parser.py)): `requests` + BeautifulSoup.
+- **TeX bootstrap** ([`utils/tex_bootstrap.py`](../app/utils/tex_bootstrap.py)): minimal TinyTeX install + the exact `tlmgr` package set.
 
-### Stage 1 Prompt Template (Gemini)
-```
-SYSTEM: {skills_md contents}
+## Scoring
 
-You are an ATS optimization expert. Your job is ONLY to ensure keyword coverage 
-and relevance — not to write beautifully. Another model will handle prose quality.
-
-JD KEYWORDS REQUIRED: {jd_analysis.keywords}
-ROLE LEVEL: {jd_analysis.role_level}
-
-SECTION TO REWRITE:
-{current_section_bullets}
-
-PROJECT CONTEXT (if relevant):
-{matched_project_context}
-
-Rules:
-- Keep exact same number of bullets
-- Inject keywords naturally — no keyword stuffing
-- Preserve all numbers/metrics from original
-- Flag any bullet you're uncertain about with [UNCERTAIN]
-- Return ONLY the rewritten bullets, one per line
-```
-
-### Stage 2 Prompt Template (OpenRouter/Cohere)
-```
-SYSTEM: {skills_md contents}
-
-You are a technical resume writer known for punchy, impressive bullet points.
-The bullets below are ATS-optimized but sound robotic. Make them sound like 
-a top-tier engineer wrote them — specific, impactful, human.
-
-COMPANY TONE: {jd_analysis.tone}  (e.g., "startup casual", "enterprise formal", "research academic")
-
-ROBOTIC BULLETS FROM STAGE 1:
-{stage1_output}
-
-Rules:
-- Keep all keywords from Stage 1 — do not remove any
-- Keep all numbers/metrics — do not change them  
-- Make each bullet start with a strong, varied action verb
-- Max 2 lines per bullet
-- Return ONLY the final bullets, one per line
-```
-
----
-
-## Free API Routing Logic
-
-```python
-def get_model_for_stage(stage: int, fallback: bool = False):
-    if stage == 1:
-        return GeminiFlash()          # Always Gemini for ATS logic
-    
-    if stage == 2 and not fallback:
-        return OpenRouterFree()       # Mistral/Llama via OpenRouter
-    
-    if stage == 2 and fallback:
-        return CohereCommandR()       # Fallback if OpenRouter rate-limited
-```
-
-The agent automatically falls back if a rate limit is hit. You never need to think about it.
-
----
-
-## GitHub Copilot Integration (Optional)
-
-GitHub Copilot Pro gives access to the **GitHub Models API** — an OpenAI-compatible endpoint that lets you call GPT-4o, Claude Sonnet, and others programmatically using your Copilot Pro token.
-
-**Endpoint**: `https://models.inference.ai.azure.com`  
-**Auth**: Your GitHub Personal Access Token (same one Copilot uses)  
-**Compatible with**: OpenAI Python SDK (just change `base_url`)
-
-This can be used as an **optional Stage 2 upgrade** — if you want GPT-4o or Claude Sonnet quality for prose polishing at zero extra cost:
-
-```python
-# In config.yaml
-stage2_model: "copilot"   # Uses GitHub Models API with your PAT
-# or
-stage2_model: "openrouter" # Default free tier
-```
-
-The agent checks which is configured and routes accordingly.
-
----
-
-## Validation Layer (Prevents Hallucination)
-
-Before any LaTeX is assembled, the agent runs a fast validation pass:
-
-1. **Bullet count check**: New section must have same number of bullets as original
-2. **Project name check**: No project names in output that weren't in `projects.md`  
-3. **Metrics preservation**: Every number from the original must appear in the output
-4. **LaTeX syntax check**: No unescaped special characters (`&`, `%`, `_`, `#`)
-5. **Keyword coverage**: At least 70% of required JD keywords present in final output
-
-If validation fails → the agent retries that section once with a stricter prompt.  
-If it fails again → it keeps the original section and flags it in the report.
-
----
-
-## Output File Naming
-
-The `AnalyzeJD` node extracts company name and role title from the JD text.
-
-```
-Google_Software_Engineer_2026-04.pdf
-Microsoft_Data_Scientist_2026-04.pdf  
-Flipkart_Backend_Engineer_2026-04.pdf
-```
-
-Saved to: `{your_output_folder}/` and also `outputs/history/` for version tracking.
+See [`ATS_Planner.md`](ATS_Planner.md) for the scoring design. `compute_ats_score` ([`app/agent/nodes/score_resume.py`](../app/agent/nodes/score_resume.py)) combines keyword match, semantic context, section quality, keyword placement, and impact metrics (weights in `config.yaml`).

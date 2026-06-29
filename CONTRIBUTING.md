@@ -9,11 +9,10 @@ Thanks for your interest in improving ResumeForge! This guide covers how to get 
    ```bash
    python -m venv .venv
    source .venv/bin/activate        # Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
-   pip install ruff pytest          # dev tools
+   pip install -r requirements-dev.txt   # app deps + ruff + pytest
    ```
 3. **Copy `.env.example` to `.env`** and add at least one provider API key (Groq is the recommended free default).
-4. **Install a LaTeX distribution** (TeX Live, MiKTeX, or MacTeX) so `pdflatex` is on your PATH.
+4. **LaTeX** is handled for you: `run.sh`/`run.bat` auto-install a minimal TinyTeX on first run if `pdflatex` isn't already on your PATH.
 5. Run the app: `bash run.sh` (or `run.bat` on Windows).
 
 ## Project Layout

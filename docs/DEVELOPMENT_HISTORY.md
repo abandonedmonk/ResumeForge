@@ -1,4 +1,6 @@
-# 🎮 Implementation Guide — Vibe Coding ResumeForge
+# 🎮 Development History — How ResumeForge Was Built
+
+> **Historical build log.** This documents how the project was originally vibe-coded with an AI assistant. For the current feature set and how to extend it, see [ROADMAP.md](ROADMAP.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
 > This guide is written for someone who will use an AI coding assistant (Cursor, Copilot, Claude) to build this. Each section is a prompt you give your AI, in order. Don't skip ahead.
 
