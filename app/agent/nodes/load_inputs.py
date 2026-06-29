@@ -4,6 +4,7 @@ from pathlib import Path
 
 from app.agent.state import ResumeState
 from app.utils.config import get_config, resolve_path
+from app.utils.exceptions import ResumeForgeError
 from app.utils.logger import log_error, log_status
 
 
@@ -13,6 +14,8 @@ def _load_value(value: str) -> str:
     candidate = Path(value)
     if candidate.suffix.lower() in {".md", ".tex", ".txt"}:
         resolved = resolve_path(value)
+        if not resolved.exists():
+            raise FileNotFoundError(f"File not found: {resolved}")
         return resolved.read_text(encoding="utf-8")
     return value
 
@@ -45,7 +48,7 @@ def load_inputs(state: ResumeState) -> ResumeState:
             log_error(state, f"{field_name}: {exc}")
             state[field_name] = "" if field_name != "projects_context" else {}  # type: ignore[index]
 
-    if not state["jd_text"]:
-        log_error(state, "Job description text is required.")
+    if not state["jd_text"].strip():
+        raise ResumeForgeError("Job description is empty — cannot proceed.")
 
     return state

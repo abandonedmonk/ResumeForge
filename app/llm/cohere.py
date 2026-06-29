@@ -3,19 +3,20 @@ from __future__ import annotations
 from langchain_cohere import ChatCohere
 
 from app.llm.base import BaseLLM
+from app.utils.exceptions import LLMError
 
 
 class CohereCommandR(BaseLLM):
     provider_name = "cohere"
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
             "COHERE_API_KEY",
             "COHERE_API_KEY is missing. Add it to your .env file to use Cohere fallback.",
         )
-        self.model = self.config.get("cohere_model", "command-r")
-        self.client = ChatCohere(cohere_api_key=self.api_key, model=self.model, temperature=0.4)
+        self.model = model_name or self.config.get("cohere_model", "command-r")
+        self.client = ChatCohere(cohere_api_key=self.api_key, model=self.model)
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         try:
@@ -26,6 +27,8 @@ class CohereCommandR(BaseLLM):
                 ],
                 temperature=temperature,
             )
+            if response.content is None:
+                raise LLMError("Cohere returned an empty response.")
             text = str(response.content).strip()
             self.log(system_prompt, user_prompt, text)
             return text

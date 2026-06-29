@@ -12,7 +12,8 @@ from app.utils.logger import log_error, log_status
 
 
 def compile_tex_to_pdf(tex_content: str, destination: Path) -> str:
-    with tempfile.TemporaryDirectory() as temp_dir:
+    temp_dir = tempfile.mkdtemp(prefix="resumeforge_")
+    try:
         temp_path = Path(temp_dir)
         tex_path = temp_path / "resume.tex"
         tex_path.write_text(tex_content, encoding="utf-8")
@@ -25,6 +26,7 @@ def compile_tex_to_pdf(tex_content: str, destination: Path) -> str:
                 capture_output=True,
                 text=True,
                 check=False,
+                timeout=60,
             )
             combined_output = (result.stdout or "") + "\n" + (result.stderr or "")
 
@@ -35,6 +37,8 @@ def compile_tex_to_pdf(tex_content: str, destination: Path) -> str:
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(pdf_path, destination)
         return combined_output
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def compile_pdf(state: ResumeState) -> ResumeState:
@@ -51,10 +55,16 @@ def compile_pdf(state: ResumeState) -> ResumeState:
         temp_pdf = preview_dir / preview_name
         latex_output = compile_tex_to_pdf(state["final_tex"], temp_pdf)
         state["final_pdf_path"] = str(temp_pdf)
-        if any(token in latex_output.lower() for token in ("warning", "undefined", "error")):
+        # pdflatex flags real errors with lines beginning "!" or "LaTeX Error:".
+        if any(
+            line.lstrip().startswith("!") or "LaTeX Error:" in line
+            for line in latex_output.splitlines()
+        ):
             state["status_updates"].append(latex_output.strip())
     except FileNotFoundError:
         log_error(state, "pdflatex was not found on PATH. Make sure MiKTeX is available in your terminal.")
+    except subprocess.TimeoutExpired:
+        log_error(state, "PDF compilation timed out after 60s. The LaTeX template may have an infinite loop.")
     except Exception as exc:
         log_error(state, f"PDF compilation failed: {exc}")
 

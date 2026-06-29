@@ -1,29 +1,57 @@
-stage1_model: "groq"
-stage2_model: "groq"
+# ResumeForge configuration.
+# For personal/private values (your name, GitHub, Google Drive path), create a
+# gitignored `config.local.yaml` next to this file — its keys override these.
+
+# === LLM routing ===
+stage1_model: "groq"            # reasoning/selection stage preferred provider
+stage2_model: "groq"            # writing/generation stage preferred provider
+# Cascading fallback order. Any provider missing its API key is skipped.
+fallback_chain: ["groq", "openrouter", "gemini", "cohere", "copilot"]
+
 groq_reasoning_model: "llama-3.3-70b-versatile"
 groq_fast_model: "llama-3.3-70b-versatile"
+groq_fallback_reasoning_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
 groq_fallback_fast_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
 openrouter_model: "openai/gpt-oss-20b:free"
-openrouter_free_model: "openai/gpt-oss-20b:free"
-groq_fallback_reasoning_model: "meta-llama/llama-4-maverick-17b-128e-instruct"
 copilot_model: "gpt-4o"
 cohere_model: "command-r"
+gemini_model: "gemini-2.5-flash"   # used for semantic ATS scoring when reached
+
+# === Inputs ===
 default_skills_md: "skills.md"
 default_jd_txt: "test_files/jd.txt"
 default_projects_md: "inputs/project_profiles"
 default_resume_tex: "test_files/template.tex"
-dest_folder: "G:/My Drive/Resumes/Applied"
+
+# === Output ===
+dest_folder: ""                 # optional copy destination (e.g. a cloud-synced folder)
 default_output_folder: "outputs"
 save_history: true
+auto_name_pdf: true
+candidate_name: ""              # your full name, used in PDF filenames
+candidate_github_url: ""        # default project link when a profile omits one
+fallback_name: "Tailored Resume"
+preview_folder_name: ".preview"
+
+# === Behavior ===
 open_browser_on_launch: true
 log_prompts: true
 log_dir: ".log"
-auto_name_pdf: true
-fallback_name: "Anshuman Jena Tailored Resume"
 keyword_coverage_threshold: 0.70
 max_retries_per_section: 2
 gradio_port: 7860
-preview_folder_name: ".preview"
 enrich_with_web_search: false
 ats_semantic_scoring: true
-gemini_semantic_model: "gemini-2.5-flash"
+
+# === ATS scoring weights (must sum to 1.0) ===
+ats_score_weights:
+  keyword_match: 0.35
+  semantic_context: 0.20
+  section_quality: 0.15
+  keyword_placement: 0.15
+  impact_metrics: 0.15
+
+# === Auto-optimization loop (Phase 2) ===
+auto_optimize: true
+auto_optimize_threshold: 80     # re-tailor while overall ATS score is below this
+max_optimize_iterations: 3

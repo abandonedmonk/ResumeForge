@@ -3,6 +3,7 @@ from __future__ import annotations
 from openai import OpenAI
 
 from app.llm.base import BaseLLM
+from app.utils.exceptions import LLMError
 
 
 class OpenRouterFree(BaseLLM):
@@ -15,10 +16,7 @@ class OpenRouterFree(BaseLLM):
             "OPENROUTER_API_KEY is missing. Add it to your .env file to use OpenRouter.",
         )
         self.client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.api_key)
-        self.model = self.config.get("openrouter_model") or self.config.get(
-            "openrouter_free_model",
-            "openai/gpt-oss-20b:free",
-        )
+        self.model = self.config.get("openrouter_model", "openai/gpt-oss-20b:free")
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         try:
@@ -30,6 +28,8 @@ class OpenRouterFree(BaseLLM):
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            if not response.choices or response.choices[0].message.content is None:
+                raise LLMError("OpenRouter returned an empty response.")
             text = response.choices[0].message.content.strip()
             self.log(system_prompt, user_prompt, text)
             return text

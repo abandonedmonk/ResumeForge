@@ -18,13 +18,15 @@ def sanitize_filename_part(value: str, fallback: str) -> str:
 def build_output_basename(company_name: str, role_title: str) -> str:
     company = sanitize_filename_part(company_name, "Company")
     role = sanitize_filename_part(role_title, "Role")
-    return f"Anshuman Jena {company} {role}"
+    candidate = sanitize_filename_part(get_config().get("candidate_name", ""), "")
+    prefix = f"{candidate} " if candidate else ""
+    return f"{prefix}{company} {role}".strip()
 
 
 def build_output_filename(company_name: str, role_title: str) -> str:
     config = get_config()
     if not config.get("auto_name_pdf", True):
-        fallback = sanitize_filename_part(config.get("fallback_name", "Anshuman Jena Tailored Resume"), "Resume")
+        fallback = sanitize_filename_part(config.get("fallback_name", "Tailored Resume"), "Resume")
         return f"{fallback}.pdf"
     return f"{build_output_basename(company_name, role_title)}.pdf"
 

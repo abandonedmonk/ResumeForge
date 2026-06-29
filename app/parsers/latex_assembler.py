@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 
+from app.utils.config import get_config
 from app.utils.validator import escape_latex
 
 
@@ -13,8 +14,11 @@ SKILLS_START = "% PLACEHOLDER_SKILLS_START"
 SKILLS_END = "% PLACEHOLDER_SKILLS_END"
 PROJECTS_START = "% PLACEHOLDER_PROJECTS_START"
 PROJECTS_END = "% PLACEHOLDER_PROJECTS_END"
-DEFAULT_PROJECT_URL = "https://github.com/abandonedmonk"
 DEFAULT_PROJECT_DATE_RANGE = "Month Year -- Month Year"
+
+
+def _default_project_url() -> str:
+    return str(get_config().get("candidate_github_url", "")).strip()
 
 
 def inject_sections(original_tex: str, original_sections: dict[str, dict[str, object]], tailored_sections: dict[str, dict[str, object]]) -> str:
@@ -104,15 +108,20 @@ def format_project_entries(generated_projects: list[dict[str, object]]) -> str:
         title = escape_latex(str(project.get("title", "")).strip())
         if not title:
             continue
-        url = _latex_url(str(project.get("url", "")).strip() or DEFAULT_PROJECT_URL)
+        raw_url = str(project.get("url", "")).strip() or _default_project_url()
         date_range = escape_latex(str(project.get("date_range", "")).strip() or DEFAULT_PROJECT_DATE_RANGE)
         bullets = [_sanitize_project_bullet(str(bullet).strip()) for bullet in project.get("bullets", []) if str(bullet).strip()]
         if not bullets:
             continue
 
+        if raw_url:
+            url = _latex_url(raw_url)
+            heading_title = rf"\textbf{{{title}}} $|$ \href{{{url}}}{{\underline{{Project Link}}}}"
+        else:
+            heading_title = rf"\textbf{{{title}}}"
         lines = [
             r"  \resumeProjectHeading",
-            rf"    {{\textbf{{{title}}} $|$ \href{{{url}}}{{\underline{{Project Link}}}}}}{{{date_range}}}",
+            rf"    {{{heading_title}}}{{{date_range}}}",
             r"    \resumeItemListStart",
         ]
         for bullet in bullets[:3]:

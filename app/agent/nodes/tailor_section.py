@@ -31,14 +31,16 @@ def tailor_sections(state: ResumeState) -> ResumeState:
     stage1_model = RoutedStage1Model()
     stage2_model = RoutedStage2Model()
 
-    for section_name, section in state["resume_sections"].items():
-        if section_name in FIXED_SECTIONS:
-            continue
-        bullets = list(section.get("bullets", []))
-        if not bullets:
-            continue
+    tailorable = [
+        (name, sec) for name, sec in state["resume_sections"].items()
+        if name not in FIXED_SECTIONS and sec.get("bullets")
+    ]
+    total = len(tailorable)
 
-        log_status(state, f"Tailoring section: {section_name}")
+    for index, (section_name, section) in enumerate(tailorable):
+        bullets = list(section.get("bullets", []))
+
+        log_status(state, f"Tailoring section {index + 1}/{total}: {section_name}...")
         section_text = "\n".join(bullets)
         project_context = match_project(section_text, state["projects_context"])
         rewritten = bullets
@@ -69,7 +71,7 @@ def tailor_sections(state: ResumeState) -> ResumeState:
             except RateLimitError:
                 if attempt + 1 >= config.get("max_retries_per_section", 2):
                     log_error(state, f"Rate limit while processing section '{section_name}'. Original bullets kept.")
-                time.sleep(2)
+                time.sleep(min(2 ** attempt, 8))
             except Exception as exc:
                 log_error(state, f"Section '{section_name}' failed: {exc}. Original bullets kept.")
                 rewritten = bullets

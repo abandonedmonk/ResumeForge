@@ -3,6 +3,7 @@ from __future__ import annotations
 from openai import OpenAI
 
 from app.llm.base import BaseLLM
+from app.utils.exceptions import LLMError
 
 
 class CopilotModels(BaseLLM):
@@ -27,6 +28,8 @@ class CopilotModels(BaseLLM):
                     {"role": "user", "content": user_prompt},
                 ],
             )
+            if not response.choices or response.choices[0].message.content is None:
+                raise LLMError("Copilot returned an empty response.")
             text = response.choices[0].message.content.strip()
             self.log(system_prompt, user_prompt, text)
             return text
