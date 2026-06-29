@@ -3,10 +3,18 @@
 # gitignored `config.local.yaml` next to this file — its keys override these.
 
 # === LLM routing ===
-stage1_model: "groq"            # reasoning/selection stage preferred provider
-stage2_model: "groq"            # writing/generation stage preferred provider
-# Cascading fallback order. Any provider missing its API key is skipped.
+# model_tier picks which chain to use:
+#   free    -> free_chain (no paid key needed; cascades + rotates keys to dodge rate limits)
+#   premium -> premium_chain (bring-your-own GPT / Claude / paid Gemini keys)
+#   custom  -> fallback_chain (your own order)
+model_tier: "free"
+stage1_model: "groq"            # reasoning/selection stage preferred provider (free/custom tiers)
+stage2_model: "groq"            # writing/generation stage preferred provider (free/custom tiers)
+
+free_chain: ["groq", "openrouter", "gemini", "cohere", "copilot"]
+premium_chain: ["openai", "anthropic", "gemini", "groq"]
 fallback_chain: ["groq", "openrouter", "gemini", "cohere", "copilot"]
+# Tip: add GROQ_API_KEY_1, GROQ_API_KEY_2, ... to rotate multiple free keys.
 
 groq_reasoning_model: "llama-3.3-70b-versatile"
 groq_fast_model: "llama-3.3-70b-versatile"
@@ -16,6 +24,9 @@ openrouter_model: "openai/gpt-oss-20b:free"
 copilot_model: "gpt-4o"
 cohere_model: "command-r"
 gemini_model: "gemini-2.5-flash"   # used for semantic ATS scoring when reached
+openai_model: "gpt-4o"             # premium tier
+anthropic_model: "claude-sonnet-4-6"  # premium tier
+anthropic_max_tokens: 4096
 
 # === Inputs ===
 default_skills_md: "skills.md"

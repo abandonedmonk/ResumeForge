@@ -6,18 +6,20 @@ from app.llm.base import BaseLLM
 from app.utils.exceptions import LLMError
 
 
-class OpenRouterFree(BaseLLM):
-    provider_name = "openrouter"
+class OpenAIGPT(BaseLLM):
+    """Premium OpenAI GPT models (bring-your-own key)."""
+
+    provider_name = "openai"
 
     def __init__(self, model_name: str | None = None, api_key: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
-            "OPENROUTER_API_KEY",
-            "OPENROUTER_API_KEY is missing. Add it to your .env file to use OpenRouter.",
+            "OPENAI_API_KEY",
+            "OPENAI_API_KEY is missing. Add it to your .env file or paste it in the UI to use GPT.",
             override=api_key,
         )
-        self.client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=self.api_key)
-        self.model = self.config.get("openrouter_model", "openai/gpt-oss-20b:free")
+        self.client = OpenAI(api_key=self.api_key)
+        self.model = model_name or self.config.get("openai_model", "gpt-4o")
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         try:
@@ -30,7 +32,7 @@ class OpenRouterFree(BaseLLM):
                 ],
             )
             if not response.choices or response.choices[0].message.content is None:
-                raise LLMError("OpenRouter returned an empty response.")
+                raise LLMError("OpenAI returned an empty response.")
             text = response.choices[0].message.content.strip()
             self.log(system_prompt, user_prompt, text)
             return text

@@ -9,11 +9,12 @@ from app.utils.exceptions import LLMError
 class GeminiFlash(BaseLLM):
     provider_name = "gemini"
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(self, model_name: str | None = None, api_key: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
             "GOOGLE_API_KEY",
             "GOOGLE_API_KEY is missing. Add it to your .env file to use Gemini Flash.",
+            override=api_key,
         )
         self.model = model_name or self.config.get(
             "gemini_model", self.config.get("gemini_semantic_model", "gemini-2.0-flash")

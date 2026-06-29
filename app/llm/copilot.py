@@ -9,11 +9,12 @@ from app.utils.exceptions import LLMError
 class CopilotModels(BaseLLM):
     provider_name = "copilot"
 
-    def __init__(self) -> None:
+    def __init__(self, model_name: str | None = None, api_key: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
             "GITHUB_TOKEN",
             "GITHUB_TOKEN is missing. Create a GitHub personal access token with models access and add it to .env.",
+            override=api_key,
         )
         self.client = OpenAI(base_url="https://models.inference.ai.azure.com", api_key=self.api_key)
         self.model = self.config.get("copilot_model", "gpt-4o")
