@@ -19,14 +19,19 @@ class CohereCommandR(BaseLLM):
         self.model = model_name or self.config.get("cohere_model", "command-r")
         self.client = ChatCohere(cohere_api_key=self.api_key, model=self.model)
 
-    def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
+    def call(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.4, max_tokens: int | None = None
+    ) -> str:
         try:
+            kwargs = {"temperature": temperature}
+            if max_tokens:
+                kwargs["max_tokens"] = max_tokens
             response = self.client.invoke(
                 [
                     ("system", system_prompt),
                     ("human", user_prompt),
                 ],
-                temperature=temperature,
+                **kwargs,
             )
             if response.content is None:
                 raise LLMError("Cohere returned an empty response.")

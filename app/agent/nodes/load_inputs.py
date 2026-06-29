@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from app.agent.state import ResumeState
+from app.llm.task_routing import routing_summary
 from app.parsers.projects_parser import resolve_projects_source
 from app.parsers.template_registry import load_template
 from app.profiles.profile_store import resolve_resume_tex_source
@@ -26,6 +27,19 @@ def _load_value(value: str) -> str:
 def load_inputs(state: ResumeState) -> ResumeState:
     config = get_config()
     log_status(state, "Loading inputs...")
+
+    summary = routing_summary(config)
+    if summary["live"]:
+        live = ", ".join(f"{p}({n})" for p, n in summary["live"].items())
+        tasks = summary["tasks"]
+        log_status(
+            state,
+            f"Providers live: {live} · writing→{tasks.get('project_generation', '?')}, "
+            f"ATS→{tasks.get('ats_scoring', '?')}, analysis→{tasks.get('analyze_jd', '?')}",
+        )
+    else:
+        log_error(state, "No LLM provider keys detected. Add at least one key (e.g. GROQ_API_KEY) to .env — see docs/PROVIDERS.md.")
+
     output_folder = state["output_folder"] or config.get("default_output_folder", "outputs")
     state["output_folder"] = str(resolve_path(output_folder))
 

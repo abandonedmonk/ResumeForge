@@ -22,11 +22,13 @@ class AnthropicClaude(BaseLLM):
         self.model = model_name or self.config.get("anthropic_model", "claude-sonnet-4-6")
         self.max_tokens = int(self.config.get("anthropic_max_tokens", 4096))
 
-    def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
+    def call(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.4, max_tokens: int | None = None
+    ) -> str:
         try:
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=self.max_tokens,
+                max_tokens=max_tokens or self.max_tokens,
                 temperature=temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],

@@ -23,6 +23,7 @@ from app.integrations.resume_import import import_profile_from_pdf
 from app.integrations.skills_refresh import append_missing, missing_against, suggestions_markdown
 from app.llm.keystore import clear_session_keys, set_session_keys
 from app.llm.router import RoutedStage2Model
+from app.llm.task_routing import routing_summary
 from app.parsers.profile_template_builder import build_personal_template
 from app.parsers.projects_parser import parse_projects_source
 from app.profiles.profile_store import assets_dir, load_profile, save_personal_template, save_profile
@@ -111,6 +112,34 @@ def _ats_analysis_markdown(score_data: dict, skills_gap: dict) -> str:
             "### Recommendations",
             *([f"- {item}" for item in recommendations] or ["- None"]),
         ]
+    )
+
+
+def _routing_markdown() -> str:
+    """Human-readable 'which provider does what' readout from the current keys/config."""
+    summary = routing_summary(get_config())
+    live = summary["live"]
+    if not live:
+        return (
+            "**No provider keys detected.** Add at least one key (e.g. `GROQ_API_KEY`) to "
+            "`.env` — see [docs/PROVIDERS.md](docs/PROVIDERS.md)."
+        )
+    live_line = " · ".join(f"`{p}` ({n} key{'s' if n > 1 else ''})" for p, n in live.items())
+    labels = {
+        "analyze_jd": "JD analysis",
+        "ats_scoring": "ATS scoring",
+        "project_selection": "Project pick",
+        "project_generation": "Writing",
+        "tailor": "Tailoring",
+        "cover_letter": "Cover letter",
+        "report": "Report",
+    }
+    rows = "\n".join(f"| {labels.get(t, t)} | `{p}` |" for t, p in summary["tasks"].items())
+    return (
+        f"**Live providers:** {live_line}\n\n"
+        "| Task | Provider |\n|---|---|\n" + rows + "\n\n"
+        "_Auto-detected from your keys. Override per task via `task_routing` in `config.yaml`. "
+        "Oversized prompts skip to a bigger-context model, then trim as a last resort._"
     )
 
 
@@ -607,6 +636,10 @@ def build_ui() -> gr.Blocks:
                             anthropic_key = gr.Textbox(
                                 label="Anthropic API key", type="password", placeholder="sk-ant-…"
                             )
+                        with gr.Accordion("🧭 Providers & Routing", open=False):
+                            routing_status = gr.Markdown(_routing_markdown())
+                            refresh_routing = gr.Button("Refresh", size="sm")
+                            refresh_routing.click(fn=_routing_markdown, inputs=None, outputs=routing_status)
                         gr.Markdown(f"Using root skill file: `{resolve_path(config['default_skills_md'])}`")
                         run_button = gr.Button("Generate Preview", variant="primary")
 

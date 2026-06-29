@@ -28,8 +28,8 @@ def _parse_bullets(response_text: str, expected_count: int) -> list[str]:
 
 def tailor_sections(state: ResumeState) -> ResumeState:
     config = get_config()
-    stage1_model = RoutedStage1Model()
-    stage2_model = RoutedStage2Model()
+    stage1_model = RoutedStage1Model(task="tailor")
+    stage2_model = RoutedStage2Model(task="tailor")
 
     tailorable = [
         (name, sec) for name, sec in state["resume_sections"].items()

@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 
 from app.agent.state import ResumeState
+from app.llm.model_limits import limits_for, provider_model, trim_to_budget
 from app.llm.router import RoutedModel
+from app.llm.task_routing import resolve_task_chain, tier_chain
 from app.prompts.generate_personalization import build_generation_prompt, build_selection_prompt
 from app.utils.config import get_config
 from app.utils.json_utils import extract_json_blob
@@ -88,7 +90,7 @@ def generate_projects(state: ResumeState) -> ResumeState:
             max_projects=max_projects,
             skills_gap=skills_gap,
         )
-        sel_response = RoutedModel("stage1").call(sel_sys, sel_user)
+        sel_response = RoutedModel("stage1", task="project_selection").call(sel_sys, sel_user)
         sel_payload = json.loads(extract_json_blob(sel_response))
         
         selected_keys = sel_payload.get("selected_project_keys", [])
@@ -112,6 +114,19 @@ def generate_projects(state: ResumeState) -> ResumeState:
                     "date_range": p.get("date_range", "Month Year -- Month Year")
                 })
         
+        # Budget the project bodies to the writer's input limit *before* prompting, so a
+        # Groq-only run (≈12k cap) never 413s on long READMEs. With a big-context writer
+        # (Gemini) the per-project budget is huge and nothing is trimmed.
+        if selected_projects_data:
+            gen_chain = resolve_task_chain("project_generation", tier_chain(budget), budget)
+            writer = gen_chain[0] if gen_chain else "groq"
+            writer_budget = limits_for(provider_model(writer, budget), budget)["max_input_tokens"]
+            # Reserve room for JD analysis, skills, and instructions in the same prompt.
+            body_pool = max(1000, writer_budget - 4000)
+            per_project = body_pool // len(selected_projects_data)
+            for p in selected_projects_data:
+                p["body"] = trim_to_budget(str(p.get("body", "")), per_project)
+
         # --- Stage 2: Generation (Writing) ---
         log_status(state, "Stage 2: Writing tailored headline, bullets, and skill lists...")
         gen_sys, gen_user = build_generation_prompt(
@@ -123,7 +138,7 @@ def generate_projects(state: ResumeState) -> ResumeState:
             skills_gap=skills_gap,
             recommendations=recommendations,
         )
-        gen_response = RoutedModel("stage2").call(gen_sys, gen_user)
+        gen_response = RoutedModel("stage2", task="project_generation").call(gen_sys, gen_user)
         gen_payload = json.loads(extract_json_blob(gen_response))
 
         state["generated_headline"] = str(gen_payload.get("headline", "")).strip()

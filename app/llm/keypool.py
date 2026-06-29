@@ -62,3 +62,15 @@ def ordered_keys(base_name: str) -> list[str]:
         start = _rotation.get(base_name, 0) % len(keys)
         _rotation[base_name] = (start + 1) % len(keys)
     return keys[start:] + keys[:start]
+
+
+def available_providers() -> dict[str, int]:
+    """Map each provider with at least one usable key (env, numbered, or session) to
+    its key count. Drives auto-routing and the UI status readout. Call this *after*
+    ``set_session_keys`` so UI-pasted keys count as live."""
+    live: dict[str, int] = {}
+    for provider, env_name in PROVIDER_ENV.items():
+        count = len(_collect(env_name))
+        if count:
+            live[provider] = count
+    return live

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 
 from app.llm.anthropic_claude import AnthropicClaude
@@ -9,10 +10,31 @@ from app.llm.copilot import CopilotModels
 from app.llm.gemini import GeminiFlash
 from app.llm.groq import GroqModel
 from app.llm.keypool import PROVIDER_ENV, ordered_keys
+from app.llm.model_limits import estimate_tokens, limits_for, provider_model, trim_to_budget
 from app.llm.openai_gpt import OpenAIGPT
 from app.llm.openrouter import OpenRouterFree
+from app.llm.task_routing import (
+    DEFAULT_FALLBACK_CHAIN,
+    DEFAULT_FREE_CHAIN,
+    DEFAULT_PREMIUM_CHAIN,
+    resolve_task_chain,
+    task_is_large_context,
+    tier_chain,
+)
 from app.utils.config import get_config
 from app.utils.exceptions import ConfigError, LLMError, RateLimitError
+
+logger = logging.getLogger(__name__)
+
+# Re-exported for back-compat (these chains now live in task_routing).
+__all__ = [
+    "RoutedModel",
+    "RoutedStage1Model",
+    "RoutedStage2Model",
+    "DEFAULT_FREE_CHAIN",
+    "DEFAULT_PREMIUM_CHAIN",
+    "DEFAULT_FALLBACK_CHAIN",
+]
 
 _PROVIDERS: dict[str, type[BaseLLM]] = {
     "groq": GroqModel,
@@ -23,13 +45,6 @@ _PROVIDERS: dict[str, type[BaseLLM]] = {
     "openai": OpenAIGPT,
     "anthropic": AnthropicClaude,
 }
-
-# Free, rate-limit-resilient cascade (no paid key required).
-DEFAULT_FREE_CHAIN = ["groq", "openrouter", "gemini", "cohere", "copilot"]
-# Premium cascade for bring-your-own paid keys.
-DEFAULT_PREMIUM_CHAIN = ["openai", "anthropic", "gemini", "groq"]
-# Back-compat alias used by the "custom" tier.
-DEFAULT_FALLBACK_CHAIN = DEFAULT_FREE_CHAIN
 
 
 def _get_provider(name: str, model_name: str | None = None, api_key: str | None = None) -> BaseLLM:
@@ -52,24 +67,31 @@ def _backoff(attempt: int) -> None:
 
 
 class RoutedModel:
-    """Single parameterized router with tiered chains and per-provider key rotation.
+    """Parameterized router with tiered chains, per-provider key rotation, optional
+    task-aware provider selection, and token-budget awareness.
 
-    ``stage`` is ``"stage1"`` (reasoning, temp 0.2) or ``"stage2"`` (writing,
-    temp 0.4). ``tier`` selects the provider chain: ``"free"`` (default),
-    ``"premium"`` (paid GPT/Claude/Gemini), or ``"custom"`` (the ``fallback_chain``
-    config key). For each provider every available key (``NAME``, ``NAME_1`` …,
-    plus any UI session key) is tried — rotating on rate limits — before failing
-    over to the next provider.
+    ``stage`` is ``"stage1"`` (reasoning, temp 0.2) or ``"stage2"`` (writing, temp 0.4).
+    ``tier`` selects the provider chain: ``"free"`` (default), ``"premium"``, or
+    ``"custom"``. ``task`` (optional) routes the call to the best provider for that job
+    (e.g. ``"ats_scoring"`` -> Gemini, ``"tailor"`` -> Groq) and enables the
+    skip-to-bigger-then-trim token logic. With ``task=None`` the behavior is identical
+    to the original two-stage router.
     """
 
-    def __init__(self, stage: str, tier: str | None = None) -> None:
+    def __init__(self, stage: str, tier: str | None = None, task: str | None = None) -> None:
         if stage not in ("stage1", "stage2"):
             raise ConfigError(f"Unknown router stage: '{stage}'. Use 'stage1' or 'stage2'.")
         config = get_config()
         self.stage = stage
         self.tier = (tier or config.get("model_tier", "free")).lower()
         self.preferred = config.get(f"{stage}_model", "groq")
-        self.chain = self._build_chain(config)
+        self.task = task
+        self.large_context = task_is_large_context(task) if task else False
+
+        if task:
+            self.chain = resolve_task_chain(task, tier_chain(config), config)
+        else:
+            self.chain = self._build_chain(config)
 
         if stage == "stage1":
             self.groq_models = [
@@ -104,6 +126,12 @@ class RoutedModel:
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float | None = None) -> str:
         temp = temperature if temperature is not None else self.default_temp
+        if not self.task:
+            return self._call_legacy(system_prompt, user_prompt, temp)
+        return self._call_token_aware(system_prompt, user_prompt, temp)
+
+    def _call_legacy(self, system_prompt: str, user_prompt: str, temp: float) -> str:
+        """Original behavior — exact, for ``task=None`` back-compat (no token logic)."""
         errors: list[str] = []
         seen: set[str] = set()
         for name in self.chain:
@@ -135,16 +163,81 @@ class RoutedModel:
                         break  # generic failure — other keys unlikely to help; next model/provider
         raise LLMError(f"All {self.stage} ({self.tier}) providers failed. " + " | ".join(errors))
 
+    def _call_token_aware(self, system_prompt: str, user_prompt: str, temp: float) -> str:
+        """Task path: prefer a provider that *fits* the prompt (skip to a bigger-context
+        model when needed); only trim the input if nothing in the chain can hold it."""
+        config = get_config()
+        prompt_tokens = estimate_tokens(system_prompt) + estimate_tokens(user_prompt)
+        sys_tokens = estimate_tokens(system_prompt)
+
+        # (provider, model_name) candidates in chain order; groq contributes its 2 models.
+        candidates: list[tuple[str, str | None]] = []
+        for name in self.chain:
+            models = self.groq_models if name == "groq" else [None]
+            for model_name in models:
+                candidates.append((name, model_name))
+
+        def input_budget(name: str, model_name: str | None) -> int:
+            return limits_for(provider_model(name, config, model_name), config)["max_input_tokens"]
+
+        any_fits = any(prompt_tokens <= input_budget(n, m) for n, m in candidates)
+        if any_fits:
+            order = candidates  # chain order; non-fitting models are skipped below
+        else:
+            # Nothing fits — route to the largest-budget model and trim as a last resort.
+            order = sorted(candidates, key=lambda nm: input_budget(*nm), reverse=True)
+            biggest = input_budget(*order[0]) if order else prompt_tokens
+            logger.warning(
+                "%s/%s prompt ~%d tokens exceeds every provider budget (max %d); trimming input.",
+                self.stage, self.task, prompt_tokens, biggest,
+            )
+
+        errors: list[str] = []
+        misconfigured: set[str] = set()
+        for name, model_name in order:
+            if name in misconfigured:
+                continue
+            limits = limits_for(provider_model(name, config, model_name), config)
+            if any_fits and prompt_tokens > limits["max_input_tokens"]:
+                continue  # a bigger model exists — skip this one
+            user = (
+                user_prompt
+                if any_fits
+                else trim_to_budget(user_prompt, limits["max_input_tokens"], reserve_tokens=sys_tokens)
+            )
+            keys = ordered_keys(PROVIDER_ENV.get(name, "")) or [None]
+            out_cap = limits["max_output_tokens"]
+            for attempt, key in enumerate(keys):
+                try:
+                    return _get_provider(name, model_name, key).call(
+                        system_prompt, user, temperature=temp, max_tokens=out_cap
+                    )
+                except RateLimitError as exc:
+                    errors.append(_describe(name, exc, model_name))
+                    if attempt + 1 < len(keys):
+                        _backoff(attempt)
+                    continue
+                except ConfigError as exc:
+                    errors.append(_describe(name, exc, model_name))
+                    misconfigured.add(name)  # missing key — skip both this provider's models
+                    break
+                except LLMError as exc:
+                    errors.append(_describe(name, exc, model_name))
+                    break
+        raise LLMError(
+            f"All {self.stage} ({self.tier}, task={self.task}) providers failed. " + " | ".join(errors)
+        )
+
 
 class RoutedStage1Model(RoutedModel):
     """Backward-compatible alias for the reasoning/selection stage."""
 
-    def __init__(self, tier: str | None = None) -> None:
-        super().__init__("stage1", tier=tier)
+    def __init__(self, tier: str | None = None, task: str | None = None) -> None:
+        super().__init__("stage1", tier=tier, task=task)
 
 
 class RoutedStage2Model(RoutedModel):
     """Backward-compatible alias for the writing/generation stage."""
 
-    def __init__(self, tier: str | None = None) -> None:
-        super().__init__("stage2", tier=tier)
+    def __init__(self, tier: str | None = None, task: str | None = None) -> None:
+        super().__init__("stage2", tier=tier, task=task)

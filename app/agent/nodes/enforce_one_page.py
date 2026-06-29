@@ -107,7 +107,7 @@ def _ai_polish_longest_bullets(state: ResumeState) -> bool:
         try:
             system = "You shorten resume bullets. Keep all metrics, keywords, and **bold** markers. Return ONE line only."
             user = f"Shorten this to about 70% length without losing impact:\n{text}"
-            shorter = RoutedModel("stage2").call(system, user).strip().splitlines()[0].strip()
+            shorter = RoutedModel("stage2", task="tailor").call(system, user).strip().splitlines()[0].strip()
             if shorter and len(shorter) < len(text):
                 project["bullets"][idx] = shorter
                 changed = True
