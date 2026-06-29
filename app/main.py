@@ -13,9 +13,10 @@ if __package__ in {None, ""}:
 
 from app.agent.graph import run_agent
 from app.agent.nodes.save_and_display import save_reviewed_output
+from app.llm.keystore import clear_session_keys, set_session_keys
 from app.llm.router import RoutedStage2Model
 from app.utils.file_namer import build_log_stem
-from app.utils.config import get_config, resolve_path
+from app.utils.config import clear_session_overrides, get_config, resolve_path, set_session_overrides
 from app.utils.logger import get_logs_dir, log_error, log_status, write_run_log
 
 
@@ -88,11 +89,28 @@ def _run_resumeforge(
     stage2_model: str,
     enrich_with_web_search: bool,
     jd_text_override: str = "",
+    model_tier: str = "free",
+    openai_key: str = "",
+    anthropic_key: str = "",
 ):
+    set_session_keys({"OPENAI_API_KEY": openai_key, "ANTHROPIC_API_KEY": anthropic_key})
+    set_session_overrides(
+        {
+            "stage1_model": stage1_model,
+            "stage2_model": stage2_model,
+            "enrich_with_web_search": enrich_with_web_search,
+            "model_tier": model_tier,
+        }
+    )
+    try:
+        return _run_resumeforge_inner(output_folder, jd_text_override)
+    finally:
+        clear_session_overrides()
+        clear_session_keys()
+
+
+def _run_resumeforge_inner(output_folder: str, jd_text_override: str = ""):
     config = get_config()
-    config["stage1_model"] = stage1_model
-    config["stage2_model"] = stage2_model
-    config["enrich_with_web_search"] = enrich_with_web_search
     logs_before = {path.name for path in get_logs_dir().glob("*.log")}
     session_state: dict[str, Any] = {"status_updates": [], "errors": []}
     log_status(session_state, "Starting ResumeForge preview generation...")
@@ -203,7 +221,6 @@ def _apply_ai_edit_request(current_latex: str, edit_request: str, stage2_model: 
         return current_latex, "Enter an edit request first.", None
 
     config = get_config()
-    config["stage2_model"] = stage2_model
     skills_md = resolve_path(config["default_skills_md"]).read_text(encoding="utf-8")
     session_state: dict[str, Any] = {"status_updates": [], "errors": []}
     log_status(session_state, "Applying AI edit request to LaTeX preview...")
@@ -219,11 +236,14 @@ Edit request:
 Current LaTeX resume:
 {current_latex}
 """.strip()
+    set_session_overrides({"stage2_model": stage2_model})
     try:
         updated = RoutedStage2Model().call(system_prompt, user_prompt)
     except Exception as exc:
         log_error(session_state, f"AI edit request failed: {exc}")
         return current_latex, "\n".join(session_state["errors"]), None
+    finally:
+        clear_session_overrides()
     cleaned = updated.strip()
     if "```" in cleaned:
         cleaned = cleaned.replace("```latex", "").replace("```tex", "").replace("```", "").strip()
@@ -354,18 +374,31 @@ def build_ui() -> gr.Blocks:
                         )
                         stage1_model = gr.Dropdown(
                             label="Stage 1 Model (Selection)",
-                            choices=["groq", "openrouter", "cohere", "copilot"],
+                            choices=["groq", "openrouter", "gemini", "cohere", "copilot", "openai", "anthropic"],
                             value=config.get("stage1_model", "groq"),
                         )
                         stage2_model = gr.Dropdown(
                             label="Stage 2 Model (Writing)",
-                            choices=["groq", "cohere", "openrouter", "copilot"],
+                            choices=["groq", "cohere", "openrouter", "gemini", "copilot", "openai", "anthropic"],
                             value=config.get("stage2_model", "groq"),
                         )
                         enrich_toggle = gr.Checkbox(
                             label="Enrich with web search",
                             value=bool(config.get("enrich_with_web_search", False)),
                         )
+                        model_tier = gr.Dropdown(
+                            label="Model Tier",
+                            choices=["free", "premium", "custom"],
+                            value=config.get("model_tier", "free"),
+                            info="free = cascade across free providers · premium = your GPT/Claude/Gemini keys",
+                        )
+                        with gr.Accordion("🔑 Premium keys (optional, not stored)", open=False):
+                            openai_key = gr.Textbox(
+                                label="OpenAI API key", type="password", placeholder="sk-…"
+                            )
+                            anthropic_key = gr.Textbox(
+                                label="Anthropic API key", type="password", placeholder="sk-ant-…"
+                            )
                         gr.Markdown(f"Using root skill file: `{resolve_path(config['default_skills_md'])}`")
                         run_button = gr.Button("Generate Preview", variant="primary")
 
@@ -405,7 +438,7 @@ def build_ui() -> gr.Blocks:
 
         run_button.click(
             fn=_run_resumeforge,
-            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input],
+            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key],
             outputs=[ats_badge, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
         )
         apply_edit_button.click(

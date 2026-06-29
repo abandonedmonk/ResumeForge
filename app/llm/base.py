@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import os
 
+from app.llm.keystore import get_session_key
 from app.utils.config import get_config
 from app.utils.exceptions import AuthenticationError, ConfigError, LLMError, RateLimitError
 from app.utils.logger import log_llm_interaction
@@ -18,8 +19,9 @@ class BaseLLM(abc.ABC):
         log_llm_interaction(self.provider_name, system_prompt, user_prompt, response_text)
 
     @staticmethod
-    def require_env(name: str, help_text: str) -> str:
-        value = os.getenv(name, "").strip()
+    def require_env(name: str, help_text: str, override: str | None = None) -> str:
+        # Priority: explicit override (e.g. a rotated key) -> session key -> env var.
+        value = (override or get_session_key(name) or os.getenv(name, "")).strip()
         if not value:
             raise ConfigError(help_text)
         return value

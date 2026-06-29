@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -14,16 +15,34 @@ CONFIG_PATH = ROOT_DIR / "config.yaml"
 LOCAL_CONFIG_PATH = ROOT_DIR / "config.local.yaml"
 
 _config: dict[str, Any] | None = None
+_session = threading.local()
+
+
+def set_session_overrides(overrides: dict[str, Any] | None) -> None:
+    """Set per-run config overrides for the current thread (e.g. UI selections).
+
+    Because ``get_config()`` returns a fresh deepcopy each call, mutating its
+    result no longer propagates to pipeline nodes. Session overrides are the
+    supported way to pass per-request settings (model tier, chosen models,
+    toggles) into the graph without bleeding across concurrent sessions.
+    """
+    _session.overrides = dict(overrides or {})
+
+
+def clear_session_overrides() -> None:
+    _session.overrides = {}
+
+
+def _session_overrides() -> dict[str, Any]:
+    return getattr(_session, "overrides", {})
 
 
 def get_config() -> dict[str, Any]:
     """Return a deep copy of the merged config so callers can mutate it freely.
 
-    Values from ``config.yaml`` are overlaid with ``config.local.yaml`` (if
-    present), letting users keep personal settings out of version control. The
-    files are read once into a private module-level cache; returning a
-    ``deepcopy`` prevents per-session mutations in the Gradio UI (e.g.
-    ``config["stage1_model"] = ...``) from bleeding across concurrent sessions.
+    Layering (last wins): ``config.yaml`` -> ``config.local.yaml`` (gitignored
+    personal values) -> per-thread session overrides. Returning a ``deepcopy``
+    keeps concurrent Gradio sessions isolated.
     """
     global _config
     if _config is None:
@@ -36,7 +55,9 @@ def get_config() -> dict[str, Any]:
             with LOCAL_CONFIG_PATH.open("r", encoding="utf-8") as handle:
                 merged.update(yaml.safe_load(handle) or {})
         _config = merged
-    return copy.deepcopy(_config)
+    result = copy.deepcopy(_config)
+    result.update(_session_overrides())
+    return result
 
 
 def resolve_path(path_str: str) -> Path:

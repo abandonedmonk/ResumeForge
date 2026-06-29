@@ -9,11 +9,12 @@ from app.utils.exceptions import LLMError
 class GroqModel(BaseLLM):
     provider_name = "groq"
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(self, model_name: str | None = None, api_key: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
             "GROQ_API_KEY",
             "GROQ_API_KEY is missing. Add it to your .env file to use Groq.",
+            override=api_key,
         )
         # Use provided model_name or fallback to config, then default
         self.model = model_name or self.config.get("groq_model", "llama-3.3-70b-versatile")

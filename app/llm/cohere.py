@@ -9,11 +9,12 @@ from app.utils.exceptions import LLMError
 class CohereCommandR(BaseLLM):
     provider_name = "cohere"
 
-    def __init__(self, model_name: str | None = None) -> None:
+    def __init__(self, model_name: str | None = None, api_key: str | None = None) -> None:
         super().__init__()
         self.api_key = self.require_env(
             "COHERE_API_KEY",
             "COHERE_API_KEY is missing. Add it to your .env file to use Cohere fallback.",
+            override=api_key,
         )
         self.model = model_name or self.config.get("cohere_model", "command-r")
         self.client = ChatCohere(cohere_api_key=self.api_key, model=self.model)
