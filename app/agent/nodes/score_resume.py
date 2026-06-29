@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import json
-import re
 
 from app.agent.state import ResumeState
-from app.llm.gemini import GeminiFlash
+from app.llm.router import RoutedModel
 from app.prompts.score_resume import build_semantic_score_prompt
 from app.utils.config import get_config
+from app.utils.json_utils import extract_json_blob
 from app.utils.keyword_matcher import (
     build_synonym_map,
     extract_metrics_from_bullet,
     extract_resume_bullets,
     find_keyword_in_text,
     identify_high_value_zones,
-    keyword_frequency,
     matched_keywords,
     normalize_keyword,
     section_quality_snapshot,
@@ -22,10 +21,13 @@ from app.utils.keyword_matcher import (
 )
 from app.utils.logger import log_error, log_status
 
-
-def _extract_json_blob(text: str) -> str:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    return match.group(0) if match else "{}"
+DEFAULT_ATS_WEIGHTS = {
+    "keyword_match": 0.35,
+    "semantic_context": 0.20,
+    "section_quality": 0.15,
+    "keyword_placement": 0.15,
+    "impact_metrics": 0.15,
+}
 
 
 def _dedupe_keywords(items: list[str]) -> list[str]:
@@ -56,12 +58,8 @@ def _semantic_context_score(keywords: list[str], bullets: list[str], skills_text
 
     try:
         system_prompt, user_prompt = build_semantic_score_prompt(keywords, bullets, skills_text)
-        response = GeminiFlash(model_name=config.get("gemini_semantic_model", "gemini-2.5-flash")).call(
-            system_prompt,
-            user_prompt,
-            temperature=0.1,
-        )
-        payload = json.loads(_extract_json_blob(response))
+        response = RoutedModel("stage1").call(system_prompt, user_prompt, temperature=0.1)
+        payload = json.loads(extract_json_blob(response))
         contextual = [keyword for keyword, verdict in payload.get("keyword_results", {}).items() if verdict == "contextual"]
         name_dropped = [keyword for keyword, verdict in payload.get("keyword_results", {}).items() if verdict == "name_dropped"]
         absent = [keyword for keyword, verdict in payload.get("keyword_results", {}).items() if verdict == "absent"]
@@ -154,8 +152,6 @@ def score_resume(state: ResumeState) -> ResumeState:
     target_metrics = max(1, int(round(len(bullets) * 0.6)))
     impact_score = int(round(min(metrics_bullets / target_metrics, 1.0) * 100))
 
-    _ = keyword_frequency(skills_text, base_keywords, synonym_map)
-
     missing_required = [
         skill for skill in state["jd_analysis"].get("required_skills", [])
         if not find_keyword_in_text(skill, resume_text, synonym_map)
@@ -169,13 +165,14 @@ def score_resume(state: ResumeState) -> ResumeState:
         if not find_keyword_in_text(skill, resume_text, synonym_map)
     ]
 
+    weights = {**DEFAULT_ATS_WEIGHTS, **get_config().get("ats_score_weights", {})}
     overall = int(
         round(
-            keyword_score * 0.35
-            + int(semantic["score"]) * 0.20
-            + int(section_quality["score"]) * 0.15
-            + placement_score * 0.15
-            + impact_score * 0.15
+            keyword_score * weights["keyword_match"]
+            + int(semantic["score"]) * weights["semantic_context"]
+            + int(section_quality["score"]) * weights["section_quality"]
+            + placement_score * weights["keyword_placement"]
+            + impact_score * weights["impact_metrics"]
         )
     )
 
@@ -198,7 +195,7 @@ def score_resume(state: ResumeState) -> ResumeState:
         "keyword_placement": {
             "score": placement_score,
             "high_value_hits": round(weighted_hits, 2),
-            "zones": zones,
+            "zones": list(zones.keys()),
         },
         "impact_metrics": {
             "score": impact_score,

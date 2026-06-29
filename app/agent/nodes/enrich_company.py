@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 
 from app.agent.state import ResumeState
-from app.llm.gemini import GeminiFlash
+from app.llm.router import RoutedModel
 from app.utils.config import get_config
+from app.utils.json_utils import extract_json_blob
 from app.utils.logger import log_error, log_status
-
-
-def _extract_json_blob(text: str) -> str:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    return match.group(0) if match else "{}"
 
 
 def enrich_company(state: ResumeState) -> ResumeState:
@@ -54,12 +49,8 @@ def enrich_company(state: ResumeState) -> ResumeState:
             "Only include technical or engineering-relevant keywords.\n\n"
             + "\n".join(f"- {snippet}" for snippet in snippets)
         )
-        response = GeminiFlash(model_name=config.get("gemini_semantic_model", "gemini-2.5-flash")).call(
-            system_prompt,
-            user_prompt,
-            temperature=0.1,
-        )
-        payload = json.loads(_extract_json_blob(response))
+        response = RoutedModel("stage1").call(system_prompt, user_prompt, temperature=0.1)
+        payload = json.loads(extract_json_blob(response))
         enriched = [str(item).strip() for item in payload.get("enriched_keywords", []) if str(item).strip()]
         state["jd_analysis"]["enriched_keywords"] = enriched
     except Exception as exc:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from langchain_groq import ChatGroq
 
 from app.llm.base import BaseLLM
+from app.utils.exceptions import LLMError
 
 
 class GroqModel(BaseLLM):
@@ -19,7 +20,6 @@ class GroqModel(BaseLLM):
         self.client = ChatGroq(
             model=self.model,
             groq_api_key=self.api_key,
-            temperature=0.3,
         )
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
@@ -31,6 +31,8 @@ class GroqModel(BaseLLM):
                 ],
                 temperature=temperature,
             )
+            if response.content is None:
+                raise LLMError("Groq returned an empty response.")
             text = str(response.content).strip()
             self.log(system_prompt, user_prompt, text)
             return text

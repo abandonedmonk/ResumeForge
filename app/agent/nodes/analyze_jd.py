@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import json
-import re
 
 from app.agent.state import ResumeState
-from app.llm.router import RoutedStage1Model
+from app.llm.router import RoutedModel
 from app.parsers.jd_parser import extract_company_role
 from app.prompts.analyze_jd import build_analyze_jd_prompt
+from app.utils.json_utils import extract_json_blob
 from app.utils.logger import log_error, log_status
-
-
-def _extract_json_blob(text: str) -> str:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    return match.group(0) if match else "{}"
 
 
 def analyze_jd(state: ResumeState) -> ResumeState:
@@ -30,8 +25,8 @@ def analyze_jd(state: ResumeState) -> ResumeState:
 
     try:
         system_prompt, user_prompt = build_analyze_jd_prompt(state["jd_text"], state["skills_md"])
-        response = RoutedStage1Model().call(system_prompt, user_prompt)
-        payload = json.loads(_extract_json_blob(response))
+        response = RoutedModel("stage1").call(system_prompt, user_prompt)
+        payload = json.loads(extract_json_blob(response))
         analysis.update(payload)
     except Exception as exc:
         log_error(state, f"JD analysis fallback used: {exc}")

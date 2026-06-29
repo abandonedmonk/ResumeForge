@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+import abc
 import os
-from typing import Any
 
 from app.utils.config import get_config
 from app.utils.exceptions import AuthenticationError, ConfigError, LLMError, RateLimitError
 from app.utils.logger import log_llm_interaction
 
 
-class BaseLLM:
+class BaseLLM(abc.ABC):
     provider_name = "base"
 
     def __init__(self) -> None:
@@ -33,5 +33,6 @@ class BaseLLM:
             return AuthenticationError(str(exc))
         return LLMError(str(exc))
 
+    @abc.abstractmethod
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
-        raise NotImplementedError
+        ...

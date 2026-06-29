@@ -1,16 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Environment
 .env
 .venv/
-__pycache__/
-*.pyc
+venv/
+
+# Local config overrides (personal values)
+config.local.yaml
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.synctex*
+*.fls
+*.fdb_latexmk
+
+# Project outputs
 outputs/
 logs/
 .log/
-*.pdf
-*.aux
-*.log
-*.out
-*.toc
-*.fls
-*.fdb_latexmk
-docs
+.preview/
 scratch/
+*.pdf
+
+# Personal profile (kept local, not published)
+examples/my_profile/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 import json
-import re
 
 from app.agent.state import ResumeState
-from app.llm.router import RoutedStage1Model, RoutedStage2Model
+from app.llm.router import RoutedModel
 from app.prompts.generate_personalization import build_selection_prompt, build_generation_prompt
+from app.utils.json_utils import extract_json_blob
 from app.utils.logger import log_error, log_status
-
-
-def _extract_json_blob(text: str) -> str:
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    return match.group(0) if match else "{}"
 
 
 def _fallback_skills() -> list[dict[str, object]]:
@@ -68,8 +63,8 @@ def generate_projects(state: ResumeState) -> ResumeState:
             state["jd_analysis"],
             projects_context,
         )
-        sel_response = RoutedStage1Model().call(sel_sys, sel_user)
-        sel_payload = json.loads(_extract_json_blob(sel_response))
+        sel_response = RoutedModel("stage1").call(sel_sys, sel_user)
+        sel_payload = json.loads(extract_json_blob(sel_response))
         
         selected_keys = sel_payload.get("selected_project_keys", [])
         selected_skills = sel_payload.get("selected_skill_categories", [])
@@ -100,8 +95,8 @@ def generate_projects(state: ResumeState) -> ResumeState:
             selected_projects_data,
             selected_skills,
         )
-        gen_response = RoutedStage2Model().call(gen_sys, gen_user)
-        gen_payload = json.loads(_extract_json_blob(gen_response))
+        gen_response = RoutedModel("stage2").call(gen_sys, gen_user)
+        gen_payload = json.loads(extract_json_blob(gen_response))
 
         state["generated_headline"] = str(gen_payload.get("headline", "")).strip()
 

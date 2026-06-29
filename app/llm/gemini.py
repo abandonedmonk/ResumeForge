@@ -3,6 +3,7 @@ from __future__ import annotations
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from app.llm.base import BaseLLM
+from app.utils.exceptions import LLMError
 
 
 class GeminiFlash(BaseLLM):
@@ -14,11 +15,12 @@ class GeminiFlash(BaseLLM):
             "GOOGLE_API_KEY",
             "GOOGLE_API_KEY is missing. Add it to your .env file to use Gemini Flash.",
         )
-        self.model = model_name or self.config.get("gemini_semantic_model", "gemini-2.0-flash")
+        self.model = model_name or self.config.get(
+            "gemini_model", self.config.get("gemini_semantic_model", "gemini-2.0-flash")
+        )
         self.client = ChatGoogleGenerativeAI(
             model=self.model,
             google_api_key=self.api_key,
-            temperature=0.3,
         )
 
     def call(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
@@ -30,6 +32,8 @@ class GeminiFlash(BaseLLM):
                 ],
                 temperature=temperature,
             )
+            if response.content is None:
+                raise LLMError("Gemini returned an empty response.")
             text = str(response.content).strip()
             self.log(system_prompt, user_prompt, text)
             return text
