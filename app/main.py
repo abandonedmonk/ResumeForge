@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -13,10 +15,14 @@ if __package__ in {None, ""}:
 
 from app.agent.graph import run_agent
 from app.agent.nodes.save_and_display import save_reviewed_output
+from app.integrations.profile_builder import import_profiles
+from app.integrations.profile_store import imported_dir, list_profiles, save_named
+from app.integrations.skills_refresh import append_missing, missing_against, suggestions_markdown
 from app.llm.keystore import clear_session_keys, set_session_keys
 from app.llm.router import RoutedStage2Model
-from app.utils.file_namer import build_log_stem
+from app.parsers.projects_parser import parse_projects_source
 from app.utils.config import clear_session_overrides, get_config, resolve_path, set_session_overrides
+from app.utils.file_namer import build_log_stem
 from app.utils.logger import get_logs_dir, log_error, log_status, write_run_log
 
 
@@ -326,6 +332,93 @@ Return your answer formatted EXACTLY like this (use Markdown):
         return f"**Error matching JD:** {exc}"
 
 
+# ── GitHub Profile Builder ─────────────────────────────────────────────────
+_PROFILE_MARKER_RE = re.compile(r"^<!-- resumeforge:profile (.+?) -->\s*$", re.MULTILINE)
+
+
+def _render_profiles_preview(results: list) -> str:
+    """Concatenate successful profiles with an editable, parseable file marker."""
+    blocks = [
+        f"<!-- resumeforge:profile {result.filename} -->\n{result.content.rstrip()}"
+        for result in results
+        if result.ok
+    ]
+    return "\n\n".join(blocks)
+
+
+def _parse_profiles_preview(text: str) -> list[tuple[str, str]]:
+    """Recover ``(filename, content)`` pairs from the (possibly edited) preview."""
+    matches = list(_PROFILE_MARKER_RE.finditer(text or ""))
+    pairs: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        name = match.group(1).strip()
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        content = text[start:end].strip()
+        if name and content:
+            pairs.append((name, content))
+    return pairs
+
+
+def _list_imported_markdown() -> str:
+    paths = list_profiles()
+    if not paths:
+        return "_No imported profiles yet. Once you import any, they replace the bundled examples._"
+    listing = "\n".join(f"- `{path.name}`" for path in paths)
+    return (
+        f"**Imported profiles** (in `{imported_dir()}`) — used instead of the bundled "
+        f"examples once present:\n\n{listing}"
+    )
+
+
+def _import_github_profiles(repos_text: str, github_token: str) -> tuple[str, str]:
+    urls = [line.strip() for line in (repos_text or "").splitlines() if line.strip()]
+    if not urls:
+        return "", "⚠️ Paste at least one GitHub repo URL (one per line)."
+    token = (github_token or os.getenv("GITHUB_API_TOKEN", "")).strip()
+    results = import_profiles(urls, token=token)
+    preview = _render_profiles_preview(results)
+    status = "\n".join(f"{'✅' if r.ok else '❌'} {r.url} — {r.message}" for r in results)
+    if not preview:
+        status += "\n\nNo valid profiles generated — nothing to save."
+    return preview, status
+
+
+def _save_github_profiles(preview_text: str) -> tuple[str, str]:
+    pairs = _parse_profiles_preview(preview_text)
+    if not pairs:
+        return "Nothing to save — import some repos first.", _list_imported_markdown()
+    saved = [str(save_named(name, content)) for name, content in pairs]
+    return f"Saved {len(saved)} profile(s):\n" + "\n".join(saved), _list_imported_markdown()
+
+
+def _compute_missing_skills() -> tuple[dict[str, list[str]], Path]:
+    config = get_config()
+    skills_path = resolve_path(str(config.get("default_skills_md", "skills.md")))
+    directory = imported_dir()
+    if not directory.is_dir() or not any(directory.glob("*.md")):
+        return {}, skills_path
+    projects = parse_projects_source(str(directory))
+    skills_text = skills_path.read_text(encoding="utf-8") if skills_path.exists() else ""
+    return missing_against(list(projects.values()), skills_text), skills_path
+
+
+def _refresh_skills_suggestions() -> str:
+    directory = imported_dir()
+    if not directory.is_dir() or not any(directory.glob("*.md")):
+        return "Import and save some profiles first, then refresh."
+    missing, _ = _compute_missing_skills()
+    return suggestions_markdown(missing)
+
+
+def _append_skills_to_file() -> str:
+    missing, skills_path = _compute_missing_skills()
+    added = append_missing(skills_path, missing)
+    if not added:
+        return "Nothing new to append — `skills.md` already covers the imported tech."
+    return f"Appended {added} suggested skill(s) under a new heading in `{skills_path}`."
+
+
 def build_ui() -> gr.Blocks:
     config = get_config()
     with gr.Blocks(title="ResumeForge - Resume Tailoring Agent") as demo:
@@ -428,7 +521,67 @@ def build_ui() -> gr.Blocks:
                         save_status = gr.Textbox(label="Save Status", lines=2)
                         saved_pdf_file = gr.File(label="Saved PDF", type="filepath")
 
+            with gr.Tab("Build Profile from GitHub"):
+                gr.Markdown(
+                    "Paste GitHub repo URLs (one per line). ResumeForge reads each README + "
+                    "metadata via the public GitHub API and distills a truthful, reusable project "
+                    "profile. Once you save any profile, the imported set replaces the bundled "
+                    "examples as your projects source.\n\n"
+                    "_Anonymous GitHub API allows ~60 requests/hr; add a token below (or set "
+                    "`GITHUB_API_TOKEN`) to raise it to 5000/hr._"
+                )
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        repos_input = gr.Textbox(
+                            label="GitHub repo URLs (one per line)",
+                            placeholder="https://github.com/owner/repo\nowner/another-repo",
+                            lines=8,
+                        )
+                        with gr.Accordion("🔑 GitHub token (optional, not stored)", open=False):
+                            github_token_input = gr.Textbox(
+                                label="GitHub API token",
+                                type="password",
+                                placeholder="github_pat_… or ghp_…",
+                            )
+                        import_btn = gr.Button("Import Repos", variant="primary")
+                        import_status = gr.Markdown()
+                        gr.Markdown("---")
+                        refresh_skills_btn = gr.Button("Suggest Skills from Imports", size="sm")
+                        append_skills_btn = gr.Button("Append New Skills to skills.md", size="sm", variant="secondary")
+                        skills_suggestions = gr.Markdown()
+                        append_skills_status = gr.Markdown()
+                    with gr.Column(scale=1):
+                        profiles_preview = gr.Code(
+                            label="Generated profiles (editable — edits are saved)",
+                            language="markdown",
+                            lines=24,
+                        )
+                        save_profiles_btn = gr.Button("Save Profiles", variant="primary")
+                        save_profiles_status = gr.Markdown()
+                        imported_listing = gr.Markdown(_list_imported_markdown())
+
         state_store = gr.State({})
+
+        import_btn.click(
+            fn=_import_github_profiles,
+            inputs=[repos_input, github_token_input],
+            outputs=[profiles_preview, import_status],
+        )
+        save_profiles_btn.click(
+            fn=_save_github_profiles,
+            inputs=[profiles_preview],
+            outputs=[save_profiles_status, imported_listing],
+        )
+        refresh_skills_btn.click(
+            fn=_refresh_skills_suggestions,
+            inputs=[],
+            outputs=[skills_suggestions],
+        )
+        append_skills_btn.click(
+            fn=_append_skills_to_file,
+            inputs=[],
+            outputs=[append_skills_status],
+        )
 
         match_btn.click(
             fn=_quick_match_jd,

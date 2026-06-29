@@ -2,7 +2,24 @@ from __future__ import annotations
 
 import re
 
-from app.utils.config import resolve_path
+from app.utils.config import get_config, resolve_path
+
+
+def resolve_projects_source(default_source: str) -> str:
+    """Return the directory of user-imported profiles when present, else the default.
+
+    Locked decision ("imported replace bundled"): once the user has imported any
+    GitHub-derived profile into ``imported_profiles_dir``, that directory becomes
+    the sole projects source — the bundled examples are onboarding samples, not a
+    real candidate's inventory. When the imported dir is empty/absent, the caller's
+    default (e.g. ``default_projects_md`` from ``config.local.yaml``) wins.
+    """
+    imported = str(get_config().get("imported_profiles_dir", "") or "")
+    if imported:
+        candidate = resolve_path(imported)
+        if candidate.is_dir() and any(candidate.glob("*.md")):
+            return str(candidate)
+    return default_source
 
 
 def parse_projects_md(md_content: str) -> dict[str, dict[str, object]]:
@@ -100,7 +117,7 @@ def _store_inventory_project(
         stripped = line.strip()
         tech_match = re.match(r"^\[Tech Stack:\s*(.+?)\]\s*$", stripped)
         url_match = re.match(r"^\[GitHub URL:\s*(.+?)\]\s*$", stripped)
-        date_match = re.match(r"^\[Date Range:\s*(.+?)\]\s*$", stripped)
+        date_match = re.match(r"^\[Date(?:\sRange)?:\s*(.+?)\]\s*$", stripped)
         keywords_match = re.match(r"^\[Keywords:\s*(.+?)\]\s*$", stripped)
         if tech_match:
             tech_stack = [item.strip() for item in tech_match.group(1).split(",") if item.strip()]
