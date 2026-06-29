@@ -5,6 +5,7 @@ from pathlib import Path
 from app.agent.state import ResumeState
 from app.parsers.projects_parser import resolve_projects_source
 from app.parsers.template_registry import load_template
+from app.profiles.profile_store import resolve_resume_tex_source
 from app.utils.config import get_config, resolve_path, update_session_overrides
 from app.utils.exceptions import ResumeForgeError
 from app.utils.logger import log_error, log_status
@@ -29,9 +30,11 @@ def load_inputs(state: ResumeState) -> ResumeState:
     state["output_folder"] = str(resolve_path(output_folder))
 
     # Resolve the resume layout. An explicit template path (owner's personal file
-    # via config.local, or a provided state value) wins; otherwise use the named
-    # template from the registry and apply its content budget.
-    explicit_tex = state.get("original_resume_tex") or config.get("default_resume_tex", "")
+    # via config.local, or a provided state value) wins; then a profile-builder
+    # generated personal template (Phase 6); otherwise the named registry template.
+    explicit_tex = state.get("original_resume_tex") or resolve_resume_tex_source(
+        config.get("default_resume_tex", "")
+    )
     if not explicit_tex:
         template = load_template(config.get("resume_template", "classic"))
         if template is not None:

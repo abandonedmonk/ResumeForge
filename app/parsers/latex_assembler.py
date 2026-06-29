@@ -5,7 +5,6 @@ import re
 from app.utils.config import get_config
 from app.utils.validator import escape_latex
 
-
 SUMMARY_PATTERN = re.compile(
     r"(\\\\\s*\\vspace\{6pt\}\s*\n\s*)\{(?P<summary>[^{}]*)\}(\s*\n\\end\{center\})",
     re.MULTILINE,
@@ -36,8 +35,12 @@ def inject_sections(original_tex: str, original_sections: dict[str, dict[str, ob
         bullet_index = 0
         for line in raw_tex.splitlines():
             stripped = line.strip()
-            if stripped.startswith(r"\item") and bullet_index < len(new_bullets):
-                indent = re.match(r"^\s*", line).group(0)
+            indent = re.match(r"^\s*", line).group(0)
+            if stripped.startswith(r"\resumeItem{") and bullet_index < len(new_bullets):
+                # Preserve the \resumeItem{...} macro so formatting (small font) survives.
+                replacement_lines.append(f"{indent}\\resumeItem{{{new_bullets[bullet_index]}}}")
+                bullet_index += 1
+            elif stripped.startswith(r"\item") and bullet_index < len(new_bullets):
                 replacement_lines.append(f"{indent}\\item {new_bullets[bullet_index]}")
                 bullet_index += 1
             else:
