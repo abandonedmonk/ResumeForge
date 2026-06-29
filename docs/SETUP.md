@@ -8,10 +8,15 @@ Install these once. Then never again.
 - **Windows**: Download from https://python.org → check "Add to PATH" during install
 - **Linux**: `sudo apt install python3.11 python3.11-venv`
 
-### 2. LaTeX (for PDF compilation)
-- **Windows**: Install MiKTeX → https://miktex.org/download (choose "Install for all users")
-- **Linux**: `sudo apt install texlive-full` (large download, ~4GB, worth it)
-- **Verify**: Open terminal → `pdflatex --version` → should show version number
+### 2. LaTeX (for PDF compilation) — installed automatically
+You no longer need to install a multi-GB TeX distribution. The one-command start
+(`run.sh` / `run.bat`) detects whether `pdflatex` is present and, if not,
+installs **TinyTeX** (~150–300MB, no admin) and pulls only the ~14 LaTeX packages
+the templates use. Nothing to do here unless you prefer to manage TeX yourself.
+
+- **Manual fallback** (optional): if you already have/ want a system TeX —
+  Windows: [MiKTeX](https://miktex.org/download); Linux: `sudo apt install texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended`.
+- **Verify**: `pdflatex --version` shows a version number.
 
 ### 3. Git (optional but recommended)
 - https://git-scm.com/downloads
@@ -55,41 +60,31 @@ Install these once. Then never again.
 
 ---
 
-## First-Time Setup (5 minutes)
+## First-Time Setup (one command)
 
 ```bash
-# 1. Clone or download the project
+# 1. Clone the project
 git clone <repo-url>
 cd resume-forge
 
-# 2. Create virtual environment
-python -m venv .venv
+# 2. Add your API keys
+cp .env.example .env      # then open .env and paste at least one key (e.g. GROQ_API_KEY)
 
-# 3. Activate it
-# Windows:
-.venv\Scripts\activate
-# Linux/Mac:
-source .venv/bin/activate
-
-# 4. Install dependencies
-pip install -r requirements.txt
-
-# 5. Set up your .env file
-cp .env.example .env
-# Open .env and paste your API keys
-
-# 6. Set up your input files
-# Copy your skills.md to inputs/skills.md
-# Copy your projects file to inputs/projects.md
-# Copy your resume to inputs/base_resume.tex
-
-# 7. Run!
-# Windows: double-click run.bat
-# Linux:
+# 3. Start it — this creates the venv, installs deps, and installs minimal TeX on first run
+#    Linux/macOS:
 ./run.sh
+#    Windows (double-click run.bat, or):
+powershell -ExecutionPolicy Bypass -File run.ps1
 ```
 
+The first run takes a few minutes (venv + dependencies + a one-time minimal TinyTeX
+install if `pdflatex` isn't already present). Subsequent runs start instantly.
 Browser opens at `http://localhost:7860` automatically.
+
+> **Docker alternative:** `cp .env.example .env` then `docker compose up --build` → serves on `http://localhost:7860`.
+
+You can build your profile (identity, projects, education, experience, certs)
+right in the UI — no need to hand-place input files.
 
 ---
 
@@ -126,24 +121,13 @@ If something fails, the error message will tell you exactly which API key is mis
 
 ---
 
-## run.bat (Windows)
+## Launchers
 
-```bat
-@echo off
-call .venv\Scripts\activate
-python app/main.py
-pause
-```
-
-## run.sh (Linux/Mac)
-
-```bash
-#!/bin/bash
-source .venv/bin/activate
-python app/main.py
-```
-
-Make it executable once: `chmod +x run.sh`
+`run.sh` (Linux/macOS) and `run.ps1`/`run.bat` (Windows) are **one-command bootstrappers**:
+they create `.venv`, install dependencies on first run, ensure a minimal TeX
+toolchain (TinyTeX) is present, then launch the app. Re-running them is cheap —
+the venv/TeX steps are skipped once their markers (`.venv/.installed`,
+`.venv/.tex_ready`) exist. On Linux make it executable once: `chmod +x run.sh`.
 
 ---
 
@@ -151,7 +135,7 @@ Make it executable once: `chmod +x run.sh`
 
 | Issue | Fix |
 |---|---|
-| `pdflatex: command not found` | LaTeX not installed or not on PATH. Restart terminal after installing MiKTeX/texlive |
+| `pdflatex: command not found` | Re-run `./run.sh` (or `run.bat`) to auto-install TinyTeX, or run `python -m app.utils.tex_bootstrap`. Restart the terminal afterward so PATH updates |
 | `GOOGLE_API_KEY not found` | Check `.env` file exists and key has no spaces around `=` |
 | `Port 7860 already in use` | Another Gradio app is running. Close it or change port in `config.yaml` |
 | OpenRouter returns 429 | Rate limited. Switch `stage2_model` to `cohere` in `config.yaml` |

@@ -90,6 +90,17 @@ def load_inputs(state: ResumeState) -> ResumeState:
             log_status(state, f"Using imported GitHub profiles: {resolved}")
         state["projects_context"] = resolved
 
+    # A JD given as a URL is fetched and replaced with the posting's text (non-fatal).
+    jd_value = state["jd_text"].strip()
+    if jd_value.startswith(("http://", "https://")) and "\n" not in jd_value:
+        from app.parsers.jd_parser import fetch_jd_from_url
+
+        log_status(state, f"Fetching job description from URL: {jd_value}")
+        try:
+            state["jd_text"] = fetch_jd_from_url(jd_value)
+        except ResumeForgeError as exc:
+            log_error(state, str(exc))
+
     if not state["jd_text"].strip():
         raise ResumeForgeError("Job description is empty — cannot proceed.")
 

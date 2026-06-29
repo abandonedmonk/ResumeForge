@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.agent.state import ResumeState
 from app.agent.nodes.compile_pdf import compile_tex_to_pdf
+from app.agent.state import ResumeState
 from app.utils.config import get_config
 from app.utils.file_namer import build_history_folder_name, build_output_basename, build_output_filename
 from app.utils.logger import log_status
@@ -41,15 +41,39 @@ def save_reviewed_output(state: ResumeState, reviewed_tex: str | None = None) ->
 
     state["saved_pdf_path"] = str(final_pdf_path)
 
+    basename = build_output_basename(company_name, role_title)
+
+    # DOCX export alongside the PDF (rebuilt from the approved final_tex).
+    if state.get("final_docx_path"):
+        from app.parsers.docx_builder import build_docx
+
+        docx_dest = output_dir / f"{basename}.docx"
+        try:
+            build_docx(state, docx_dest)
+        except Exception:
+            import shutil
+
+            shutil.copy2(state["final_docx_path"], docx_dest)
+        state["saved_docx_path"] = str(docx_dest)
+
+    # Cover letter (when generated) saved next to the PDF.
+    if state.get("cover_letter_md", "").strip():
+        (output_dir / f"{basename}_cover_letter.md").write_text(state["cover_letter_md"], encoding="utf-8")
+
     if config.get("save_history", True):
         # History stays in the local output folder alongside previews
         local_output_dir = Path(state["output_folder"])
         history_dir = local_output_dir / "history" / build_history_folder_name(company_name, role_title)
         history_dir.mkdir(parents=True, exist_ok=True)
-        basename = build_output_basename(company_name, role_title)
         history_pdf = history_dir / f"{basename}.pdf"
         compile_tex_to_pdf(state["final_tex"], history_pdf)
         (history_dir / f"{basename}.tex").write_text(state["final_tex"], encoding="utf-8")
         (history_dir / "changes_report.md").write_text(state["changes_report_md"], encoding="utf-8")
+        if state.get("saved_docx_path"):
+            import shutil
+
+            shutil.copy2(state["saved_docx_path"], history_dir / f"{basename}.docx")
+        if state.get("cover_letter_md", "").strip():
+            (history_dir / "cover_letter.md").write_text(state["cover_letter_md"], encoding="utf-8")
 
     return state

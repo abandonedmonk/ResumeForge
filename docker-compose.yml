@@ -1,0 +1,16 @@
+# Run with: cp .env.example .env  (fill in a key) then `docker compose up --build`
+services:
+  resumeforge:
+    build: .
+    image: resumeforge:latest
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    environment:
+      # No browser inside the container; serve and let the host open :7860.
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./outputs:/app/outputs
+      - ./examples/my_profile:/app/examples/my_profile
+    restart: unless-stopped

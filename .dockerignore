@@ -1,0 +1,19 @@
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+outputs/
+logs/
+.log/
+.preview/
+scratch/
+*.pdf
+# Personal data — mounted as a volume at runtime, not baked into the image.
+examples/my_profile/
+.env
+.idea/
+.vscode/

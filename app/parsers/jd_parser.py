@@ -2,6 +2,41 @@ from __future__ import annotations
 
 import re
 
+import requests
+from bs4 import BeautifulSoup
+
+from app.utils.exceptions import ResumeForgeError
+
+_USER_AGENT = (
+    "Mozilla/5.0 (compatible; ResumeForge/1.0; +https://github.com/abandonedmonk/ResumeForge)"
+)
+
+
+def fetch_jd_from_url(url: str, timeout: int = 15) -> str:
+    """Fetch a job posting URL and return its visible text (best-effort).
+
+    Strips scripts/styles/nav/footer chrome. Raises ``ResumeForgeError`` with an
+    actionable message on network/parse failure so callers can fall back gracefully.
+    """
+    try:
+        response = requests.get(url, headers={"User-Agent": _USER_AGENT}, timeout=timeout)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise ResumeForgeError(f"Could not fetch the JD URL ({url}): {exc}") from exc
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    for tag in soup(["script", "style", "noscript", "header", "footer", "nav", "svg"]):
+        tag.decompose()
+    text = soup.get_text(separator="\n")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    cleaned = "\n".join(lines)
+    if len(cleaned) < 50:
+        raise ResumeForgeError(
+            f"Fetched the URL but found little readable text ({len(cleaned)} chars). "
+            "The posting may be behind JavaScript/login — paste the JD text instead."
+        )
+    return cleaned
+
 
 JOB_TITLE_WORDS = (
     "engineer",
