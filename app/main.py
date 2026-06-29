@@ -3,12 +3,14 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import gradio as gr
+import yaml
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -17,10 +19,14 @@ from app.agent.graph import run_agent
 from app.agent.nodes.save_and_display import save_reviewed_output
 from app.integrations.profile_builder import import_profiles
 from app.integrations.profile_store import imported_dir, list_profiles, save_named
+from app.integrations.resume_import import import_profile_from_pdf
 from app.integrations.skills_refresh import append_missing, missing_against, suggestions_markdown
 from app.llm.keystore import clear_session_keys, set_session_keys
 from app.llm.router import RoutedStage2Model
+from app.parsers.profile_template_builder import build_personal_template
 from app.parsers.projects_parser import parse_projects_source
+from app.profiles.profile_store import assets_dir, load_profile, save_personal_template, save_profile
+from app.profiles.schema import Profile
 from app.utils.config import clear_session_overrides, get_config, resolve_path, set_session_overrides
 from app.utils.file_namer import build_log_stem
 from app.utils.logger import get_logs_dir, log_error, log_status, write_run_log
@@ -60,6 +66,25 @@ def _score_badge_html(summary: str, score_data: dict) -> str:
     return (
         f"<div style='padding:14px 18px;border-radius:12px;background:{bg};color:{fg};"
         f"font-weight:700;font-size:22px;text-align:center'>{label}</div>"
+    )
+
+
+def _before_after_html(original_score: dict, final_score: dict) -> str:
+    """Render the before→after ATS delta banner; empty string when no baseline."""
+    if not original_score:
+        return ""
+    before = int(original_score.get("overall", 0) or 0)
+    after = int((final_score or {}).get("overall", 0) or 0)
+    if after > before:
+        arrow, color = "▲", "#065f46"
+    elif after < before:
+        arrow, color = "▼", "#991b1b"
+    else:
+        arrow, color = "→", "#92400e"
+    return (
+        f"<div style='padding:8px 14px;border-radius:10px;background:#f1f5f9;color:{color};"
+        f"font-weight:600;text-align:center'>ATS {before}% {arrow} {after}% "
+        f"<span style='opacity:.7;font-weight:400'>(before → after optimization)</span></div>"
     )
 
 
@@ -151,6 +176,7 @@ def _run_resumeforge_inner(output_folder: str, jd_text_override: str = ""):
     errors_text = "\n".join(final_state["errors"]) or "No errors."
     return (
         _score_badge_html(final_state.get("ats_score_summary", ""), final_state.get("ats_score", {})),
+        _before_after_html(final_state.get("original_ats_score", {}), final_state.get("ats_score", {})),
         _ats_analysis_markdown(final_state.get("ats_score", {}), final_state.get("skills_gap", {})),
         final_state["changes_report_md"],
         final_state["final_tex"],
@@ -419,6 +445,87 @@ def _append_skills_to_file() -> str:
     return f"Appended {added} suggested skill(s) under a new heading in `{skills_path}`."
 
 
+# ── Profile Builder (identity / education / experience / certs) ─────────────
+_PROFILE_SKELETON = {
+    "contact": {"name": "", "email": "", "phone": "", "linkedin": "", "github": "", "website": "", "location": ""},
+    "education": [{"institution": "", "city": "", "degree": "", "dates": "", "gpa": "", "coursework": ""}],
+    "experience": [{"company": "", "role": "", "location": "", "dates": "", "bullets": ["", ""]}],
+    "certifications": [{"name": "", "issuer": "", "date": "", "url": ""}],
+}
+_CONTACT_FIELDS = ("name", "email", "phone", "linkedin", "github", "website", "location")
+
+
+def _dump_yaml(data: dict) -> str:
+    return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+
+
+def _profile_initial_yaml() -> str:
+    profile = load_profile()
+    return _dump_yaml(profile.to_dict() if profile else _PROFILE_SKELETON)
+
+
+def _profile_initial_contact() -> tuple[str, ...]:
+    profile = load_profile()
+    if not profile:
+        return ("",) * len(_CONTACT_FIELDS)
+    return tuple(getattr(profile.contact, field) for field in _CONTACT_FIELDS)
+
+
+def _profile_autofill_from_pdf(pdf_path: str | None) -> tuple:
+    if not pdf_path:
+        return (gr.update(), *(gr.update() for _ in _CONTACT_FIELDS), "Upload a resume PDF first.")
+    result = import_profile_from_pdf(pdf_path)
+    profile = result.profile
+    contact = tuple(getattr(profile.contact, field) for field in _CONTACT_FIELDS)
+    return (_dump_yaml(profile.to_dict()), *contact, result.message)
+
+
+def _profile_sync_contact(yaml_text: str, *contact_values: str) -> tuple[str, str]:
+    try:
+        data = yaml.safe_load(yaml_text) or {}
+    except yaml.YAMLError as exc:
+        return yaml_text, f"⚠️ YAML parse error — fix it before syncing: {exc}"
+    if not isinstance(data, dict):
+        data = {}
+    data["contact"] = dict(zip(_CONTACT_FIELDS, contact_values, strict=False))
+    return _dump_yaml(data), "Contact fields merged into the profile below. Edit the lists directly, then Generate."
+
+
+def _profile_store_assets(files: list | None) -> str:
+    if not files:
+        return "No files selected."
+    destination = assets_dir()
+    destination.mkdir(parents=True, exist_ok=True)
+    saved: list[str] = []
+    for file_obj in files:
+        source = Path(file_obj if isinstance(file_obj, str) else file_obj.name)
+        target = destination / source.name
+        shutil.copy2(source, target)
+        saved.append(target.name)
+    return f"Stored {len(saved)} file(s) in `{destination}`: {', '.join(saved)}"
+
+
+def _profile_generate(yaml_text: str) -> tuple[str, str]:
+    try:
+        data = yaml.safe_load(yaml_text) or {}
+    except yaml.YAMLError as exc:
+        return f"⚠️ YAML parse error: {exc}", ""
+    profile = Profile.from_dict(data if isinstance(data, dict) else {})
+    if profile.is_empty():
+        return "⚠️ Profile is empty — add at least your name and one education entry.", ""
+    try:
+        tex, _log = build_personal_template(profile, get_config().get("resume_template", "classic"))
+    except Exception as exc:
+        return f"❌ Could not build the template: {exc}", ""
+    save_profile(profile)
+    path = save_personal_template(tex)
+    return (
+        f"✅ Saved your profile and personal template to `{path}`. "
+        "It is now used automatically as your resume layout when you generate a resume.",
+        tex,
+    )
+
+
 def build_ui() -> gr.Blocks:
     config = get_config()
     with gr.Blocks(title="ResumeForge - Resume Tailoring Agent") as demo:
@@ -497,6 +604,7 @@ def build_ui() -> gr.Blocks:
 
                     with gr.Column():
                         ats_badge = gr.HTML()
+                        ats_delta = gr.HTML()
                         with gr.Tabs():
                             with gr.Tab("ATS Analysis"):
                                 ats_analysis = gr.Markdown()
@@ -560,7 +668,72 @@ def build_ui() -> gr.Blocks:
                         save_profiles_status = gr.Markdown()
                         imported_listing = gr.Markdown(_list_imported_markdown())
 
+            with gr.Tab("Build My Profile"):
+                gr.Markdown(
+                    "Enter your identity, education, experience, and certifications — or upload an "
+                    "existing resume PDF to auto-fill (embedded links extract reliably; text is "
+                    "best-effort). ResumeForge renders a personal one-page LaTeX template from this and "
+                    "uses it automatically as your resume layout. Certifications appear as text with an "
+                    "optional link; uploaded cert files are stored locally as your own evidence."
+                )
+                _contact_init = _profile_initial_contact()
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        with gr.Accordion("📄 Auto-fill from an existing resume PDF", open=False):
+                            resume_pdf_input = gr.File(label="Resume PDF", type="filepath", file_types=[".pdf"])
+                            autofill_btn = gr.Button("Auto-fill from PDF")
+                            autofill_status = gr.Markdown()
+                        gr.Markdown("**Contact**")
+                        pf_name = gr.Textbox(label="Full name", value=_contact_init[0])
+                        pf_email = gr.Textbox(label="Email", value=_contact_init[1])
+                        pf_phone = gr.Textbox(label="Phone", value=_contact_init[2])
+                        pf_linkedin = gr.Textbox(label="LinkedIn URL", value=_contact_init[3])
+                        pf_github = gr.Textbox(label="GitHub URL", value=_contact_init[4])
+                        pf_website = gr.Textbox(label="Website / Portfolio URL", value=_contact_init[5])
+                        pf_location = gr.Textbox(label="Location", value=_contact_init[6])
+                        sync_contact_btn = gr.Button("Apply contact → profile")
+                        with gr.Accordion("📎 Certificate files (stored locally as evidence)", open=False):
+                            cert_files = gr.File(
+                                label="Cert PDFs / images",
+                                type="filepath",
+                                file_count="multiple",
+                                file_types=[".pdf", ".jpg", ".jpeg", ".png"],
+                            )
+                            store_assets_btn = gr.Button("Store cert files")
+                            assets_status = gr.Markdown()
+                    with gr.Column(scale=1):
+                        profile_yaml = gr.Code(
+                            label="Profile (editable) — edit education / experience / certifications here",
+                            language="yaml",
+                            lines=24,
+                            value=_profile_initial_yaml(),
+                        )
+                        generate_template_btn = gr.Button("Generate My Template", variant="primary")
+                        generate_status = gr.Markdown()
+                        rendered_tex_preview = gr.Code(label="Rendered template (.tex)", language="latex", lines=14)
+
         state_store = gr.State({})
+
+        autofill_btn.click(
+            fn=_profile_autofill_from_pdf,
+            inputs=[resume_pdf_input],
+            outputs=[profile_yaml, pf_name, pf_email, pf_phone, pf_linkedin, pf_github, pf_website, pf_location, autofill_status],
+        )
+        sync_contact_btn.click(
+            fn=_profile_sync_contact,
+            inputs=[profile_yaml, pf_name, pf_email, pf_phone, pf_linkedin, pf_github, pf_website, pf_location],
+            outputs=[profile_yaml, generate_status],
+        )
+        store_assets_btn.click(
+            fn=_profile_store_assets,
+            inputs=[cert_files],
+            outputs=[assets_status],
+        )
+        generate_template_btn.click(
+            fn=_profile_generate,
+            inputs=[profile_yaml],
+            outputs=[generate_status, rendered_tex_preview],
+        )
 
         import_btn.click(
             fn=_import_github_profiles,
@@ -592,7 +765,7 @@ def build_ui() -> gr.Blocks:
         run_button.click(
             fn=_run_resumeforge,
             inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key],
-            outputs=[ats_badge, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
+            outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
         )
         apply_edit_button.click(
             fn=_apply_ai_edit_request,
@@ -637,6 +810,7 @@ def main() -> int:
     demo = build_ui()
     config = get_config()
     demo.launch(
+        theme=gr.themes.Soft(),
         inbrowser=bool(config.get("open_browser_on_launch", True)),
         server_name="0.0.0.0",
         server_port=int(config.get("gradio_port", 7860)),

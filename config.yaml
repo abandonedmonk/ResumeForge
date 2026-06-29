@@ -36,6 +36,12 @@ default_projects_md: "inputs/project_profiles"
 # directory contains any *.md, it transparently replaces default_projects_md as the
 # projects source. Leave the bundled examples for onboarding only.
 imported_profiles_dir: "examples/my_profile/project_profiles"
+# Profile Builder (Phase 6): structured identity/education/experience/certs live here
+# (gitignored). The personal template rendered from them transparently replaces the
+# bundled template when present. Uploaded cert files are kept under candidate_assets_dir.
+profile_yaml: "examples/my_profile/profile.yaml"
+personal_resume_tex: "examples/my_profile/template.tex"
+candidate_assets_dir: "examples/my_profile/assets"
 # Leave empty to use the bundled template chosen by `resume_template`. Set this
 # (e.g. in config.local.yaml) to your own personalized .tex to override.
 default_resume_tex: ""

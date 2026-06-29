@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 
-
 SECTION_PATTERN = re.compile(r"(\\(?:section|subsection)\{.*?\})", re.DOTALL)
 
 
@@ -39,7 +38,14 @@ def _extract_bullets(section_tex: str) -> list[str]:
     bullets: list[str] = []
     for line in section_tex.splitlines():
         stripped = line.strip()
-        if stripped.startswith(r"\item"):
+        # Experience/Projects use the \resumeItem{...} macro; Education/Skills use a
+        # bare \item. Capture both so non-fixed sections (e.g. Experience) are tailorable.
+        if stripped.startswith(r"\resumeItem{"):
+            body = stripped[len(r"\resumeItem{") :]
+            if body.endswith("}"):
+                body = body[:-1]
+            bullets.append(body.strip())
+        elif stripped.startswith(r"\item"):
             bullets.append(stripped[len(r"\item") :].strip())
     return bullets
 
@@ -61,5 +67,18 @@ if __name__ == "__main__":
         "Deployed a dashboard for 300 users",
     ]
     assert parsed["Education"]["bullets"] == []
+
+    RESUME_ITEM_SAMPLE = r"""
+\section{Experience}
+\resumeItemListStart
+  \resumeItem{Shipped a feature used by 1000 users}
+  \resumeItem{Reduced latency by 40\%}
+\resumeItemListEnd
+"""
+    resume_item_parsed = parse_latex_resume(RESUME_ITEM_SAMPLE)
+    assert resume_item_parsed["Experience"]["bullets"] == [
+        "Shipped a feature used by 1000 users",
+        r"Reduced latency by 40\%",
+    ], resume_item_parsed["Experience"]["bullets"]
     print("latex_parser self-test passed")
 
