@@ -123,6 +123,7 @@ def _run_resumeforge(
     model_tier: str = "free",
     openai_key: str = "",
     anthropic_key: str = "",
+    generate_cover_letter: bool = False,
 ):
     set_session_keys({"OPENAI_API_KEY": openai_key, "ANTHROPIC_API_KEY": anthropic_key})
     set_session_overrides(
@@ -131,6 +132,7 @@ def _run_resumeforge(
             "stage2_model": stage2_model,
             "enrich_with_web_search": enrich_with_web_search,
             "model_tier": model_tier,
+            "generate_cover_letter": generate_cover_letter,
         }
     )
     try:
@@ -185,6 +187,8 @@ def _run_resumeforge_inner(output_folder: str, jd_text_override: str = ""):
         errors_text,
         run_log_content,
         final_state,
+        final_state.get("cover_letter_md", "") or "_Cover letter not enabled for this run._",
+        _safe_file_output(final_state.get("final_docx_path")),
     )
 
 
@@ -557,8 +561,8 @@ def build_ui() -> gr.Blocks:
                                 f"`{resolve_path(config.get('default_jd_txt', 'N/A'))}`"
                             )
                             jd_text_input = gr.Textbox(
-                                label="Job Description",
-                                placeholder="Paste the job description here…",
+                                label="Job Description (paste text, or a posting URL)",
+                                placeholder="Paste the job description here… or paste a https://… job posting URL",
                                 lines=14,
                                 max_lines=40,
                             )
@@ -585,6 +589,10 @@ def build_ui() -> gr.Blocks:
                         enrich_toggle = gr.Checkbox(
                             label="Enrich with web search",
                             value=bool(config.get("enrich_with_web_search", False)),
+                        )
+                        cover_letter_toggle = gr.Checkbox(
+                            label="Generate cover letter (extra LLM call)",
+                            value=bool(config.get("generate_cover_letter", False)),
                         )
                         model_tier = gr.Dropdown(
                             label="Model Tier",
@@ -619,8 +627,11 @@ def build_ui() -> gr.Blocks:
                                 )
                                 apply_edit_button = gr.Button("Apply AI Edit")
                                 edit_status = gr.Textbox(label="Edit Status", lines=2)
+                            with gr.Tab("Cover Letter"):
+                                cover_letter_md = gr.Markdown("_Enable \"Generate cover letter\" before running._")
                             with gr.Tab("Preview PDF"):
                                 pdf_file = gr.File(label="Preview PDF", type="filepath")
+                                docx_file = gr.File(label="Resume (.docx)", type="filepath")
                             with gr.Tab("Logs"):
                                 log_preview = gr.Textbox(label="Run Log", lines=18)
                         status_box = gr.Textbox(label="Status Log", lines=10)
@@ -764,8 +775,8 @@ def build_ui() -> gr.Blocks:
 
         run_button.click(
             fn=_run_resumeforge,
-            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key],
-            outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store],
+            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key, cover_letter_toggle],
+            outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store, cover_letter_md, docx_file],
         )
         apply_edit_button.click(
             fn=_apply_ai_edit_request,

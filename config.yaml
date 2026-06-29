@@ -65,6 +65,7 @@ fallback_name: "Tailored Resume"
 preview_folder_name: ".preview"
 
 # === Behavior ===
+generate_cover_letter: false    # opt-in: an extra LLM call that drafts a cover letter
 open_browser_on_launch: true
 log_prompts: true
 log_dir: ".log"

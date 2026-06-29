@@ -1,10 +1,23 @@
 # ResumeForge — Linux Setup Guide
 
-## Prerequisites
+## Fastest path: one command
 
-### 1. LaTeX Compiler (`pdflatex`)
+```bash
+git clone <your-repo-url>
+cd ResumeForge
+cp .env.example .env   # paste at least one key (e.g. GROQ_API_KEY)
+./run.sh
+```
 
-ResumeForge calls `pdflatex` to compile your resume. Install TeX Live:
+`run.sh` creates the venv, installs dependencies, and — if `pdflatex` isn't
+already present — installs a minimal **TinyTeX** (no sudo) with only the LaTeX
+packages the templates need. Everything below is optional/manual.
+
+---
+
+## Prerequisites (manual route)
+
+### 1. LaTeX Compiler (`pdflatex`) — optional, only if you skip `run.sh`'s auto-install
 
 ```bash
 # Debian / Ubuntu
@@ -20,7 +33,7 @@ Verify:
 pdflatex --version
 ```
 
-> **Note:** `texlive-latex-extra` is required — resume templates use packages like `enumitem`, `geometry`, `titlesec`, and `hyperref` that are not included in the base install.
+> **Note:** `texlive-latex-extra` is required — resume templates use packages like `enumitem`, `geometry`, `titlesec`, and `hyperref` that are not in the base install. (TinyTeX via `run.sh` pulls exactly these and nothing more.)
 
 ---
 

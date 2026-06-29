@@ -21,6 +21,15 @@ def parse_page_count(latex_output: str) -> int | None:
 
 
 def compile_tex_to_pdf(tex_content: str, destination: Path) -> str:
+    # Make a TinyTeX install (from the one-command bootstrap) discoverable even when
+    # the app is launched directly without the run script adding it to PATH.
+    try:
+        from app.utils.tex_bootstrap import add_tinytex_to_path
+
+        add_tinytex_to_path()
+    except Exception:
+        pass
+
     temp_dir = tempfile.mkdtemp(prefix="resumeforge_")
     try:
         temp_path = Path(temp_dir)

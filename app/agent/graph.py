@@ -7,6 +7,8 @@ from app.agent.nodes.assemble_latex import assemble_latex
 from app.agent.nodes.compile_pdf import compile_pdf
 from app.agent.nodes.enforce_one_page import enforce_one_page
 from app.agent.nodes.enrich_company import enrich_company
+from app.agent.nodes.generate_cover_letter import generate_cover_letter
+from app.agent.nodes.generate_docx import generate_docx
 from app.agent.nodes.generate_projects import generate_projects
 from app.agent.nodes.generate_report import generate_report
 from app.agent.nodes.load_inputs import load_inputs
@@ -65,6 +67,8 @@ def build_graph():
     graph.add_node("enforce_one_page", enforce_one_page)
     graph.add_node("score_resume", score_resume)
     graph.add_node("generate_report", generate_report)
+    graph.add_node("generate_cover_letter", generate_cover_letter)
+    graph.add_node("generate_docx", generate_docx)
     graph.add_node("save_and_display", save_and_display)
 
     graph.set_entry_point("load_inputs")
@@ -96,7 +100,9 @@ def build_graph():
             "done": "generate_report",
         },
     )
-    graph.add_edge("generate_report", "save_and_display")
+    graph.add_edge("generate_report", "generate_cover_letter")
+    graph.add_edge("generate_cover_letter", "generate_docx")
+    graph.add_edge("generate_docx", "save_and_display")
     graph.add_edge("save_and_display", END)
     return graph.compile()
 
