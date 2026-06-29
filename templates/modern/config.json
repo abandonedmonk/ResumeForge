@@ -1,0 +1,8 @@
+{
+  "name": "modern",
+  "description": "Accent-colored one-page layout with tighter margins.",
+  "compiler": "pdflatex",
+  "max_projects": 3,
+  "max_skills": 5,
+  "max_bullets_per_project": 3
+}

@@ -28,6 +28,13 @@ class ResumeState(TypedDict):
     status_updates: list[str]
     run_log_path: str
     run_log_paths: list[str]
+    # Template & one-page enforcement
+    resume_template: str
+    page_count: int
+    max_pages: int
+    allow_two_pages: bool
+    candidate_years_experience: int
+    layout_notes: list[str]
 
 
 def default_state() -> ResumeState:
@@ -56,4 +63,10 @@ def default_state() -> ResumeState:
         status_updates=[],
         run_log_path="",
         run_log_paths=[],
+        resume_template="",
+        page_count=0,
+        max_pages=1,
+        allow_two_pages=False,
+        candidate_years_experience=0,
+        layout_notes=[],
     )

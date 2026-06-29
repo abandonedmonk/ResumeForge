@@ -160,9 +160,14 @@ def generate_projects(state: ResumeState) -> ResumeState:
             "project_selection_reason": "Fallback used.",
         }
 
-    # Final cleanup and logging
-    state["generated_skills"] = state["generated_skills"][:4]
-    state["generated_projects"] = state["generated_projects"][:3]
+    # Final cleanup and logging — honor the active template's content budget.
+    from app.utils.config import get_config
+
+    budget = get_config()
+    max_skills = int(budget.get("max_skills", 4))
+    max_projects = int(budget.get("max_projects", 3))
+    state["generated_skills"] = state["generated_skills"][:max_skills]
+    state["generated_projects"] = state["generated_projects"][:max_projects]
 
     if state["generated_headline"]:
         state["changes_log"].append({

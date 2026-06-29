@@ -5,6 +5,7 @@ from langgraph.graph import END, StateGraph
 from app.agent.nodes.analyze_jd import analyze_jd
 from app.agent.nodes.assemble_latex import assemble_latex
 from app.agent.nodes.compile_pdf import compile_pdf
+from app.agent.nodes.enforce_one_page import enforce_one_page
 from app.agent.nodes.enrich_company import enrich_company
 from app.agent.nodes.generate_projects import generate_projects
 from app.agent.nodes.generate_report import generate_report
@@ -34,6 +35,7 @@ def build_graph():
     graph.add_node("validate_output", validate_output)
     graph.add_node("assemble_latex", assemble_latex)
     graph.add_node("compile_pdf", compile_pdf)
+    graph.add_node("enforce_one_page", enforce_one_page)
     graph.add_node("score_resume", score_resume)
     graph.add_node("generate_report", generate_report)
     graph.add_node("save_and_display", save_and_display)
@@ -51,10 +53,11 @@ def build_graph():
         "compile_pdf",
         _should_stop_after_compile,
         {
-            "continue": "score_resume",
+            "continue": "enforce_one_page",
             "error": END,
         },
     )
+    graph.add_edge("enforce_one_page", "score_resume")
     graph.add_edge("score_resume", "generate_report")
     graph.add_edge("generate_report", "save_and_display")
     graph.add_edge("save_and_display", END)

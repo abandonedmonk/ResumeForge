@@ -1,0 +1,8 @@
+{
+  "name": "classic",
+  "description": "Clean black-and-white one-page layout (Jake's Resume style).",
+  "compiler": "pdflatex",
+  "max_projects": 3,
+  "max_skills": 4,
+  "max_bullets_per_project": 3
+}

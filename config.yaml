@@ -32,7 +32,17 @@ anthropic_max_tokens: 4096
 default_skills_md: "skills.md"
 default_jd_txt: "test_files/jd.txt"
 default_projects_md: "inputs/project_profiles"
-default_resume_tex: "test_files/template.tex"
+# Leave empty to use the bundled template chosen by `resume_template`. Set this
+# (e.g. in config.local.yaml) to your own personalized .tex to override.
+default_resume_tex: ""
+
+# === Template & one-page layout ===
+resume_template: "classic"      # any folder under templates/ (classic, modern, ...)
+max_projects: 3                 # content budget (templates may override)
+max_skills: 4
+max_bullets_per_project: 3
+candidate_years_experience: 0   # 10+ auto-allows a second page
+allow_two_pages: false          # explicit opt-in for a 2-page resume
 
 # === Output ===
 dest_folder: ""                 # optional copy destination (e.g. a cloud-synced folder)

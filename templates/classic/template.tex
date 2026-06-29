@@ -1,0 +1,118 @@
+%-------------------------
+% ResumeForge — "Classic" one-page template (Jake's Resume style)
+% Replace the identity / education / experience blocks with your own.
+% Do NOT remove the % PLACEHOLDER_* markers — ResumeForge injects content there.
+%-------------------------
+\documentclass[letterpaper,10pt]{article}
+\usepackage{anyfontsize}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{soul}
+\geometry{
+  top=0.5in,
+  bottom=0.5in,
+  left=0.6in,
+  right=0.6in
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+% Section formatting
+\titleformat{\section}{
+  \vspace{-1pt}\scshape\bfseries\raggedright\large
+}{}{0em}{\MakeUppercase}[\color{black}\titlerule \vspace{0pt}]
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item{\small\setlength{\baselineskip}{10pt} #1 \vspace{-2pt}}
+}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{\textwidth}[t]{@{}p{0.75\textwidth}@{\extracolsep{\fill}}r@{}}
+      \textbf{#1} & \small #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+      \small#1 & \small\textit{#2} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, label={$\bullet$}, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+%-------------------------------------------
+\begin{document}
+\fontsize{10.5}{11}\selectfont
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape \textbf{Your Name}} \\ \vspace{4pt}
+    \href{mailto:you@example.com}{\ul{you@example.com}} $|$
+    \href{https://www.linkedin.com/in/your-handle/}{\ul{LinkedIn}} $|$
+    \href{https://github.com/your-handle}{\ul{GitHub}} $|$
+    +1 555 555 5555 \\ \vspace{6pt}
+    {Professional summary goes here — ResumeForge replaces this line with a JD-tailored headline.}
+\end{center}
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Your University, City}{GPA: X.XX}
+    {Your Degree}{\textit{Expected Graduation: Month Year}}  \vspace{-9pt}
+  \item \small{\textbf{Relevant Coursework:} Course One, Course Two, Course Three}
+\resumeSubHeadingListEnd
+%-----------SKILLS-----------
+\section{Skills}
+\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]
+  \small{\item{
+    % PLACEHOLDER_SKILLS_START
+    % Format expected (one category per line, no blank lines between):
+    % \textbf{Category Name:} Item1, Item2, Item3 \\
+    % PLACEHOLDER_SKILLS_END
+  }}
+\end{itemize}
+%-----------EXPERIENCE-----------
+\section{Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Company Name}{Location}
+    {Your Role}{Month Year -- Month Year}
+    \resumeItemListStart
+      \resumeItem{Describe an achievement with impact, method, and a metric.}
+      \resumeItem{Describe a second achievement; ResumeForge will tailor these bullets to the JD.}
+    \resumeItemListEnd
+\resumeSubHeadingListEnd
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+  % PLACEHOLDER_PROJECTS_START
+  % Format expected (repeat block below for each project):
+  %
+  % \resumeProjectHeading
+  %   {\textbf{Project Title} $|$ \href{URL}{\underline{Project Link}}}{Mon YYYY -- Mon YYYY}
+  %   \resumeItemListStart
+  %     \resumeItem{Bullet point one.}
+  %   \resumeItemListEnd
+  %
+  % PLACEHOLDER_PROJECTS_END
+\resumeSubHeadingListEnd
+%-------------------------------------------
+\end{document}
