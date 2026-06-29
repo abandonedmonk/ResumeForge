@@ -35,6 +35,11 @@ class ResumeState(TypedDict):
     allow_two_pages: bool
     candidate_years_experience: int
     layout_notes: list[str]
+    # Smart optimization loop
+    original_ats_score: dict[str, Any]
+    optimization_iteration: int
+    optimization_scores: list[int]
+    optimization_summary: str
 
 
 def default_state() -> ResumeState:
@@ -69,4 +74,8 @@ def default_state() -> ResumeState:
         allow_two_pages=False,
         candidate_years_experience=0,
         layout_notes=[],
+        original_ats_score={},
+        optimization_iteration=0,
+        optimization_scores=[],
+        optimization_summary="",
     )
