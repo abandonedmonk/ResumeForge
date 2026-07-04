@@ -92,6 +92,22 @@ cp -r skill/ ~/.claude/skills/resumeforge/
 
 Then just ask your agent: *"roast my resume"*, *"tailor my resume for this JD"*, *"what is my GitHub missing that this role wants"*. See [`skill/README.md`](skill/README.md) for Codex / Gemini setup.
 
+## MCP server (optional)
+
+For MCP clients (Claude Desktop, IDE MCP integrations) ResumeForge also ships a local **stdio MCP server** exposing typed tools — `compile_latex`, `tailor_resume`, `roast_resume`, `cold_read`, `find_github_gap`, `compression_receipt`:
+
+```bash
+pip install "resumeforge[mcp]"     # installs the optional MCP dependency
+```
+
+Then register it with your client:
+
+```json
+{ "mcpServers": { "resumeforge": { "command": "resumeforge-mcp" } } }
+```
+
+Same free cascade as everything else; `jd`/`resume` tool args accept raw text, a file path, or (for `jd`) a URL. This is an alternative to the CLI/skill — use whichever your agent speaks.
+
 ## How it works
 
 ```mermaid

@@ -25,8 +25,13 @@ dependencies = [
     "duckduckgo-search>=7.0.0",
 ]
 
+[project.optional-dependencies]
+# Local stdio MCP server — `pip install "resumeforge[mcp]"`.
+mcp = ["mcp>=1.2.0"]
+
 [project.scripts]
 resumeforge = "app.cli:main"
+resumeforge-mcp = "app.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 # The importable package is `app/`, not a directory named after the project.
