@@ -1,0 +1,14 @@
+{
+  "name": "resumeforge",
+  "version": "1.0.0",
+  "description": "Free LaTeX resume engine — tailor, roast, cold-read, and gap-analyse resumes against a job description. Runs on a free multi-provider LLM cascade; installs as a CLI, an Open-Agent-Skill, or a local MCP server.",
+  "category": "Productivity",
+  "tags": ["resume", "cv", "latex", "ats", "job-search", "cli", "mcp", "career"],
+  "platforms": ["claude-code", "codex", "gemini-cli", "opencode", "mcp"],
+  "author": {
+    "name": "Anshuman Jena",
+    "github": "abandonedmonk"
+  },
+  "homepage": "https://github.com/abandonedmonk/ResumeForge",
+  "entry": "skill/SKILL.md"
+}
