@@ -5,6 +5,17 @@ maps to a merged phase on `main`.
 
 ## [Unreleased]
 
+### Phase 10 — CLI + standalone features
+- **Installable CLI** (`pipx install resumeforge`): `resumeforge {ui,init,tailor,cold-read,roast,gap,receipt}`. Runs the existing pipeline headless; the Gradio app is now `resumeforge ui`. Packaging via a proper `[build-system]` + `[project.scripts]` entry point.
+- **Compression Receipt** — every `tailor` run emits an auditable `receipt.json` (words removed, bullets strengthened/condensed, keyword deltas, semantic similarity). 0-token, local.
+- **Cold Read Simulator** (`cold-read`) — adversarial zero-context read: targeted role / strongest qualification / biggest gap.
+- **Resume Roaster** (`roast`) — brutally honest, shareable `[ROAST] → [FIX]` feedback; optional JD-scoped.
+- **GitHub Gap-Finder** (`gap`) — 3-stage (local pre-filter → local summarise → one grounded LLM call) delta between what you built on GitHub and what your résumé claims.
+- Run artifacts written to `~/.resumeforge/runs/<run-id>/`. New task routes (`cold_read`, `roast`, `gap_analysis`) + `fetch_user_repos`. Test + lint green (`pytest`, `ruff`).
+
+### Phase 9 — Smart task-aware, token-budget routing
+- Route each task to its best provider (Groq writes, Gemini scores ATS), auto-detected from available keys; oversized prompts skip to a bigger-context model and trim only as a last resort. Provider guide in `docs/PROVIDERS.md`.
+
 ### Phase 8 — Open-source readiness
 - Root `README.md` with feature matrix, quick start, and a Mermaid architecture diagram.
 - GitHub Actions CI (`ruff` + `pytest` on Python 3.11 & 3.12); `requirements-dev.txt`.

@@ -31,6 +31,7 @@ Paste a job description (or a posting URL). ResumeForge picks your most relevant
 | ATS scoring | Keyword + semantic + section-quality + placement + impact sub-scores · **auto-optimize loop** to a target with before→after delta |
 | Output | One-page **PDF** · clean ATS-friendly **DOCX** · optional **cover letter** · "what changed & why" report · version history |
 | Ingestion | **GitHub** project import · **résumé-PDF** auto-fill · structured profile forms · **JD-from-URL** |
+| CLI & standalone features | `resumeforge` binary · **roast** · **cold-read** · GitHub **gap**-finder · auditable **compression receipt** — all headless, reuse the free cascade |
 | Run anywhere | One-command `run.sh`/`run.ps1`/`run.bat` · **Docker** (`docker compose up`) · minimal TinyTeX, no admin |
 
 ## Quick Start
@@ -51,6 +52,25 @@ First run creates the venv, installs dependencies, and — if `pdflatex` isn't a
 **Docker:** `cp .env.example .env` then `docker compose up --build` → `http://localhost:7860`.
 
 Get a free key in ~1 minute: [Groq](https://console.groq.com) · [Google AI Studio](https://aistudio.google.com/apikey) · [OpenRouter](https://openrouter.ai/keys) · [Cohere](https://dashboard.cohere.com). One key is enough — see **[which key to pick & how routing works](docs/PROVIDERS.md)**.
+
+## CLI (headless)
+
+Beyond the web UI, ResumeForge installs as a `resumeforge` command that runs the same engine headless:
+
+```bash
+pipx install resumeforge      # or: pip install -e .
+
+resumeforge init                              # check LaTeX + provider keys, scaffold .env
+resumeforge ui                                # launch the Gradio app (same as python -m app.main)
+
+resumeforge tailor  --jd job.txt              # tailor to a JD (file, URL, or text); --resume <cv.tex> optional
+resumeforge roast   --resume cv.pdf           # brutally honest [ROAST] → [FIX] feedback (add --jd for fit-scoped)
+resumeforge cold-read --resume cv.pdf --jd job.txt   # zero-context recruiter read
+resumeforge gap --github <user> --resume cv.pdf --jd job.txt   # what your résumé misses vs your GitHub
+resumeforge receipt --last                    # compression receipt for the most recent run
+```
+
+Each `tailor` run writes its artifacts (`resume.tex`, `resume.pdf`, `receipt.json`, optional `cold-read.json`) to `~/.resumeforge/runs/<run-id>/`. Every feature reuses the free multi-provider cascade — no paid key required.
 
 ## How it works
 

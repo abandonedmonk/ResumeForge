@@ -88,6 +88,56 @@ def _default_date_range(created_at: str, pushed_at: str) -> str:
     return start or end or ""
 
 
+def _raise_for_user_status(resp: requests.Response, username: str) -> None:
+    if resp.status_code == 200:
+        return
+    if resp.status_code == 404:
+        raise ResumeForgeError(f"GitHub user not found: {username}.")
+    if resp.status_code == 401:
+        raise ResumeForgeError("GitHub token rejected (401). Check your GITHUB_API_TOKEN.")
+    if resp.status_code == 403 and resp.headers.get("X-RateLimit-Remaining") == "0":
+        raise ResumeForgeError(
+            "GitHub API rate limit reached (60 requests/hr without a token). "
+            "Add a GitHub token to raise the limit to 5000/hr, or wait and retry."
+        )
+    raise ResumeForgeError(f"GitHub API error {resp.status_code} for user {username}: {resp.text[:200]}")
+
+
+def fetch_user_repos(username: str, token: str = "", limit: int = 30) -> list[dict]:
+    """List a user's own public repos (most-recently-pushed first), lightweight
+    metadata only — no README. The gap-finder's 0-token pre-filter scores on this;
+    READMEs are fetched later only for the few repos that survive filtering.
+    """
+    resp = requests.get(
+        f"{GITHUB_API}/users/{username}/repos",
+        headers=_headers(token, "application/vnd.github+json"),
+        params={"sort": "pushed", "per_page": min(max(limit, 1), 100), "type": "owner"},
+        timeout=_TIMEOUT,
+    )
+    _raise_for_user_status(resp, username)
+    repos: list[dict] = []
+    for meta in resp.json()[:limit]:
+        created_at = meta.get("created_at", "") or ""
+        pushed_at = meta.get("pushed_at", "") or ""
+        repos.append(
+            {
+                "owner": username,
+                "repo": meta.get("name", "") or "",
+                "full_name": meta.get("full_name") or f"{username}/{meta.get('name', '')}",
+                "description": meta.get("description") or "",
+                "language": meta.get("language") or "",
+                "topics": meta.get("topics") or [],
+                "html_url": meta.get("html_url") or "",
+                "stargazers_count": int(meta.get("stargazers_count", 0) or 0),
+                "fork": bool(meta.get("fork", False)),
+                "created_at": created_at,
+                "pushed_at": pushed_at,
+                "date_range": _default_date_range(created_at, pushed_at),
+            }
+        )
+    return repos
+
+
 def fetch_repo(owner: str, repo: str, token: str = "") -> dict:
     """Fetch repo metadata + raw README. Raises ``ResumeForgeError`` on failure.
 

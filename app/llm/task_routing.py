@@ -34,6 +34,11 @@ TASK_ROUTES: dict[str, dict] = {
     "tailor": {"preferred": ["groq"], "large_context": False},
     "cover_letter": {"preferred": ["groq"], "large_context": False},
     "report": {"preferred": ["groq"], "large_context": False},
+    # Standalone features (Phase 10): reading/classification -> small fast models;
+    # gap analysis -> Gemini for its large free daily quota.
+    "cold_read": {"preferred": ["groq"], "large_context": False},
+    "roast": {"preferred": ["groq"], "large_context": False},
+    "gap_analysis": {"preferred": ["gemini"], "large_context": False},
 }
 
 
