@@ -127,6 +127,14 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
     if not jd_text:
         raise SystemExit("Provide a job description with --jd (file, URL, or text).")
 
+    if args.branch:  # validate up front — don't run a full pipeline then crash on a bad name
+        from app.features.branches import valid_name
+
+        try:
+            valid_name(args.branch)
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+
     original_tex = ""
     if args.resume:
         resume_path = Path(args.resume)
@@ -166,9 +174,26 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
         cold = run_cold_read(strip_latex_commands(final.get("final_tex", "")), jd_text)
         write_json(run / "cold-read.json", cold)
 
+    branch_saved = None
+    if args.branch:
+        from app.features.branches import save_branch
+
+        jd = final.get("jd_analysis", {})
+        branch_saved = save_branch(
+            args.branch,
+            final.get("final_tex", ""),
+            {
+                "source": run.name,
+                "jd_role": jd.get("role_title", ""),
+                "jd_company": jd.get("company_name", ""),
+                "ats": final.get("ats_score_summary", ""),
+            },
+        ).name
+
     errors = final.get("errors", [])
     payload = {
         "run_dir": str(run),
+        "branch": branch_saved,
         "ats_summary": final.get("ats_score_summary", ""),
         "ats_score": final.get("ats_score", {}),
         "receipt": receipt,
@@ -187,6 +212,8 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
         from app.features.cold_read import render_cold_read
 
         human_lines += ["", render_cold_read(cold)]
+    if branch_saved:
+        human_lines += ["", f"Saved to branch: {branch_saved}"]
     human_lines += [f"  ! {error}" for error in errors]
     _emit(args, payload, "\n".join(human_lines))
     return 1 if errors else 0
@@ -243,6 +270,87 @@ def _cmd_receipt(args: argparse.Namespace) -> int:
     return 0
 
 
+def _seed_tex(args: argparse.Namespace) -> str:
+    """Resolve the source LaTeX for `branch new` from --from / --from-run / --from-file,
+    or the latest run when no source is given."""
+    from app.features.branches import read_branch_tex
+    from app.utils.run_store import latest_run_dir, run_dir
+
+    if args.from_branch:
+        tex = read_branch_tex(args.from_branch)
+        if tex is None:
+            raise SystemExit(f"Source branch not found: {args.from_branch}")
+        return tex
+    if args.from_run:
+        target = run_dir(args.from_run)
+        if target is None or not (target / "resume.tex").exists():
+            raise SystemExit(f"Run not found or has no resume.tex: {args.from_run}")
+        return (target / "resume.tex").read_text(encoding="utf-8")
+    if args.from_file:
+        path = Path(args.from_file)
+        if not path.exists():
+            raise SystemExit(f"File not found: {path}")
+        return path.read_text(encoding="utf-8")
+    latest = latest_run_dir()
+    if latest is None or not (latest / "resume.tex").exists():
+        raise SystemExit(
+            "No source given and no prior run to seed from. Use --from <branch>, "
+            "--from-run <id>, or --from-file <cv.tex>."
+        )
+    return (latest / "resume.tex").read_text(encoding="utf-8")
+
+
+def _cmd_branch(args: argparse.Namespace) -> int:
+    from app.features import branches
+
+    action = getattr(args, "branch_action", None)
+    if action == "new":
+        tex = _seed_tex(args)
+        source = args.from_branch or args.from_run or args.from_file or "latest-run"
+        path = branches.save_branch(args.name, tex, {"source": source})
+        print(f"Created branch '{branches.valid_name(args.name)}' at {path}")
+        return 0
+    if action == "list":
+        items = branches.list_branches()
+        _emit(args, {"branches": items}, branches.render_branch_list(items))
+        return 0
+    if action == "show":
+        tex = branches.read_branch_tex(args.name)
+        if tex is None:
+            raise SystemExit(f"Branch not found: {args.name}")
+        meta = branches.branch_meta(args.name)
+        tex_path = str(branches.branch_dir(args.name) / "resume.tex")
+        payload = {"meta": meta, "tex_path": tex_path}
+        human = "\n".join(
+            [
+                f"Branch: {meta.get('name', args.name)}",
+                f"  updated: {meta.get('updated_at', '?')}",
+                f"  source:  {meta.get('source', '')}",
+                f"  role:    {meta.get('jd_role', '') or 'n/a'}",
+                f"  tex:     {tex_path}",
+            ]
+        )
+        _emit(args, payload, human)
+        return 0
+    if action == "delete":
+        if not branches.delete_branch(args.name):
+            raise SystemExit(f"Branch not found: {args.name}")
+        print(f"Deleted branch: {branches.valid_name(args.name)}")
+        return 0
+    raise SystemExit("Usage: resumeforge branch {new|list|show|delete} ...")
+
+
+def _cmd_diff(args: argparse.Namespace) -> int:
+    from app.features.branches import diff_branches, render_diff
+
+    try:
+        result = diff_branches(args.a, args.b)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+    _emit(args, result, render_diff(result))
+    return 0
+
+
 # ── parser ──────────────────────────────────────────────────────────────────
 def _add_json_flag(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--json", action="store_true", help="Emit a machine-readable JSON object to stdout.")
@@ -296,10 +404,49 @@ def build_parser() -> argparse.ArgumentParser:
     _add_json_flag(p_receipt)
     p_receipt.set_defaults(func=_cmd_receipt)
 
+    p_branch = sub.add_parser("branch", help="Manage resume branches (git-for-your-resume).")
+    p_branch.set_defaults(func=_cmd_branch)
+    b_sub = p_branch.add_subparsers(dest="branch_action")
+
+    b_new = b_sub.add_parser("new", help="Create/overwrite a branch from a source.")
+    b_new.add_argument("name", help="Branch name (e.g. ml-research).")
+    b_src = b_new.add_mutually_exclusive_group()
+    b_src.add_argument("--from", dest="from_branch", help="Seed from another branch.")
+    b_src.add_argument("--from-run", help="Seed from a run id under ~/.resumeforge/runs.")
+    b_src.add_argument("--from-file", help="Seed from a .tex file.")
+    b_new.set_defaults(func=_cmd_branch)
+
+    b_list = b_sub.add_parser("list", help="List branches.")
+    _add_json_flag(b_list)
+    b_list.set_defaults(func=_cmd_branch)
+
+    b_show = b_sub.add_parser("show", help="Show a branch's metadata and tex path.")
+    b_show.add_argument("name", help="Branch name.")
+    _add_json_flag(b_show)
+    b_show.set_defaults(func=_cmd_branch)
+
+    b_del = b_sub.add_parser("delete", help="Delete a branch.")
+    b_del.add_argument("name", help="Branch name.")
+    b_del.set_defaults(func=_cmd_branch)
+
+    p_diff = sub.add_parser("diff", help="Unified diff of two branches' resume.tex.")
+    p_diff.add_argument("a", help="First branch name.")
+    p_diff.add_argument("b", help="Second branch name.")
+    _add_json_flag(p_diff)
+    p_diff.set_defaults(func=_cmd_diff)
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Emit UTF-8 regardless of the platform console (Windows defaults to cp1252,
+    # which crashes on non-Latin-1 chars in resume text and breaks --json output).
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8")
+        except (AttributeError, ValueError):
+            pass
+
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "command", None):

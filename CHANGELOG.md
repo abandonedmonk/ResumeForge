@@ -5,6 +5,15 @@ maps to a merged phase on `main`.
 
 ## [Unreleased]
 
+### Phase 12 — LaTeX semantic branching
+- **"git for your résumé"** — keep named tailored forks of your `.tex` and diff them:
+  `resumeforge branch new/list/show/delete`, `resumeforge diff <a> <b>` (unified diff, `--json`),
+  and `tailor --branch <name>` now persists the result as a branch. Branches live in
+  `~/.resumeforge/branches/<name>/` (built on the Phase 10 run-store); `new` seeds from another
+  branch, a run, or a `.tex` file. Lightweight (versioned saves + diff) — no fork/merge semantics.
+- CLI output now forced to **UTF-8** on every platform (fixes a Windows cp1252 crash on non-Latin-1
+  résumé text and keeps `--json` clean).
+
 ### Phase 11 — Agent-skill distribution + JSON CLI output
 - **`--json` on every result command** (`tailor`, `roast`, `cold-read`, `gap`, `receipt`) — a single machine-readable JSON object on stdout, so agents (and scripts) can parse results. Human text stays the default.
 - **Open-Agent-Skill package** (`skill/`): `SKILL.md` (when-to-use triggers + per-command `--json` invocation + output schemas), `agents/claude.yaml` + `agents/openai.yaml`, one-command `scripts/install.sh`, and a per-agent `README.md`. Makes ResumeForge invocable from Claude Code / Codex / Gemini CLI / OpenCode — the résumé-generation upgrade that runs on the free cascade instead of the host agent's paid model.
