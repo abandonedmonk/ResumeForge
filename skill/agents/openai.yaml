@@ -1,0 +1,17 @@
+# Codex CLI metadata for the ResumeForge skill.
+# Codex reads the skill's description for implicit matching and needs a path entry in
+# ~/.codex/config.toml (see skill/README.md). This file declares the skill's identity
+# and invocation contract.
+name: resumeforge
+description: >-
+  LaTeX resume engine — tailor, roast, cold-read, and gap-analyse resumes against a job
+  description. Free to run (own provider cascade); does not spend the host model on generation.
+entrypoint: resumeforge              # CLI binary the agent shells out to
+allow_implicit_invocation: true      # match on task intent, not only an explicit $resumeforge
+output: json                          # always call with `--json`; parse stdout
+triggers:
+  - "tailor my resume"
+  - "roast my resume"
+  - "what is my resume missing"
+  - "cold read my resume"
+  - "generate a LaTeX resume"

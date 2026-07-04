@@ -72,6 +72,20 @@ resumeforge receipt --last                    # compression receipt for the most
 
 Each `tailor` run writes its artifacts (`resume.tex`, `resume.pdf`, `receipt.json`, optional `cold-read.json`) to `~/.resumeforge/runs/<run-id>/`. Every feature reuses the free multi-provider cascade — no paid key required.
 
+Add `--json` to any result command (`tailor`, `roast`, `cold-read`, `gap`, `receipt`) to get a single machine-readable JSON object on stdout — this is what the agent skill parses.
+
+## Use as an agent skill
+
+ResumeForge ships an **Open-Agent-Skill** package (`skill/`) so Claude Code, Codex, Gemini CLI, and OpenCode can invoke it directly. The agent orchestrates (reads the JD, confirms paths, presents results); ResumeForge does the generation on its **free** cascade — so your paid subscription isn't spent on résumé writing.
+
+```bash
+bash skill/scripts/install.sh          # installs the CLI + copies the skill to ~/.claude/skills/
+# or manually:
+cp -r skill/ ~/.claude/skills/resumeforge/
+```
+
+Then just ask your agent: *"roast my resume"*, *"tailor my resume for this JD"*, *"what is my GitHub missing that this role wants"*. See [`skill/README.md`](skill/README.md) for Codex / Gemini setup.
+
 ## How it works
 
 ```mermaid

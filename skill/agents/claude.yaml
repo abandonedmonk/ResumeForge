@@ -1,0 +1,21 @@
+# Claude Code metadata for the ResumeForge skill.
+# Claude Code primarily reads SKILL.md (the frontmatter `name` + `description` drive
+# discovery and invocation). This file is supplementary metadata for tooling that wants it.
+name: resumeforge
+display_name: ResumeForge
+description: >-
+  LaTeX resume engine — tailor, roast, cold-read, and gap-analyse resumes against a job
+  description. Free to run (own provider cascade); does not spend the host model on generation.
+invocation:
+  # Natural-language triggers are declared in SKILL.md's description. This is the
+  # explicit slash-style hint for agents that support it.
+  command: resumeforge
+  requires_binary: resumeforge      # `pipx install resumeforge`
+  passthrough: true                  # the agent shells out to the CLI and parses --json stdout
+triggers:
+  - "tailor my resume"
+  - "update my CV for this JD"
+  - "roast my resume"
+  - "what is my resume missing"
+  - "cold read my resume"
+  - "generate a LaTeX resume"
