@@ -37,6 +37,10 @@ examples/my_profile/
 # Personal style guide — copy examples/skills.md.example to your own and keep it local
 /skills.md
 
+# Claude Code — personal rules & settings, kept local, never shared
+.claude/
+CLAUDE.md
+
 # IDE / OS
 .idea/
 .vscode/
