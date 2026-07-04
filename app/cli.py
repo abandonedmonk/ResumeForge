@@ -118,11 +118,8 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 
 def _cmd_tailor(args: argparse.Namespace) -> int:
-    from app.agent.graph import run_agent
-    from app.features.receipt import build_receipt_from_state, render_receipt
-    from app.utils.run_store import new_run_dir, write_json
+    from app.features.tailor import render_tailor, run_tailor
 
-    config = get_config()
     jd_text = load_jd(args.jd)
     if not jd_text:
         raise SystemExit("Provide a job description with --jd (file, URL, or text).")
@@ -146,77 +143,9 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
             )
         original_tex = str(resolve_path(str(resume_path)))
 
-    run = new_run_dir(args.branch or "")
-    initial_state = {
-        "jd_text": jd_text,
-        "original_resume_tex": original_tex,
-        "skills_md": str(config["default_skills_md"]),
-        "projects_context": str(config["default_projects_md"]),
-        "output_folder": str(run),
-    }
-    final = run_agent(initial_state)
-
-    (run / "resume.tex").write_text(final.get("final_tex", ""), encoding="utf-8")
-    pdf_src = final.get("final_pdf_path", "")
-    pdf_out = ""
-    if pdf_src and Path(pdf_src).exists():
-        shutil.copy2(pdf_src, run / "resume.pdf")
-        pdf_out = str(run / "resume.pdf")
-
-    receipt = build_receipt_from_state(final)
-    write_json(run / "receipt.json", receipt)
-
-    cold = None
-    if args.cold_read:
-        from app.features.cold_read import run_cold_read
-        from app.utils.keyword_matcher import strip_latex_commands
-
-        cold = run_cold_read(strip_latex_commands(final.get("final_tex", "")), jd_text)
-        write_json(run / "cold-read.json", cold)
-
-    branch_saved = None
-    if args.branch:
-        from app.features.branches import save_branch
-
-        jd = final.get("jd_analysis", {})
-        branch_saved = save_branch(
-            args.branch,
-            final.get("final_tex", ""),
-            {
-                "source": run.name,
-                "jd_role": jd.get("role_title", ""),
-                "jd_company": jd.get("company_name", ""),
-                "ats": final.get("ats_score_summary", ""),
-            },
-        ).name
-
-    errors = final.get("errors", [])
-    payload = {
-        "run_dir": str(run),
-        "branch": branch_saved,
-        "ats_summary": final.get("ats_score_summary", ""),
-        "ats_score": final.get("ats_score", {}),
-        "receipt": receipt,
-        "cold_read": cold,
-        "errors": errors,
-        "artifacts": {
-            "tex": str(run / "resume.tex"),
-            "pdf": pdf_out,
-            "receipt": str(run / "receipt.json"),
-            "cold_read": str(run / "cold-read.json") if cold is not None else "",
-        },
-    }
-
-    human_lines = [f"Run:  {run}", f"ATS:  {final.get('ats_score_summary', 'n/a')}", "", render_receipt(receipt)]
-    if cold is not None:
-        from app.features.cold_read import render_cold_read
-
-        human_lines += ["", render_cold_read(cold)]
-    if branch_saved:
-        human_lines += ["", f"Saved to branch: {branch_saved}"]
-    human_lines += [f"  ! {error}" for error in errors]
-    _emit(args, payload, "\n".join(human_lines))
-    return 1 if errors else 0
+    payload = run_tailor(jd_text, original_tex, branch=args.branch or "", cold_read=args.cold_read)
+    _emit(args, payload, render_tailor(payload))
+    return 1 if payload["errors"] else 0
 
 
 def _cmd_cold_read(args: argparse.Namespace) -> int:

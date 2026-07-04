@@ -2,3 +2,4 @@
 -r requirements.txt
 pytest>=8.0
 ruff>=0.6
+mcp>=1.2.0        # optional MCP server; installed here so its tests run in CI

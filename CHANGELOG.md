@@ -5,6 +5,14 @@ maps to a merged phase on `main`.
 
 ## [Unreleased]
 
+### Phase 13 — Local MCP server
+- **Optional stdio MCP server** (`pip install "resumeforge[mcp]"`, run as `resumeforge-mcp`) exposing
+  six typed tools — `compile_latex`, `tailor_resume`, `roast_resume`, `cold_read`, `find_github_gap`,
+  `compression_receipt` — for MCP clients (Claude Desktop, IDE integrations). Thin wrappers over the
+  same functions the CLI uses; `jd`/`resume` args accept text, a path, or a URL.
+- Refactor: extracted the tailor pipeline into `app/features/tailor.py` (`run_tailor`/`render_tailor`)
+  so the CLI and the MCP `tailor_resume` tool share one implementation.
+
 ### Phase 12 — LaTeX semantic branching
 - **"git for your résumé"** — keep named tailored forks of your `.tex` and diff them:
   `resumeforge branch new/list/show/delete`, `resumeforge diff <a> <b>` (unified diff, `--json`),

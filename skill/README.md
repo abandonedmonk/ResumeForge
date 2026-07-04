@@ -49,6 +49,13 @@ Any agent that reads Open-Agent-Skill `SKILL.md` files: point it at
 `~/.claude/skills/resumeforge/SKILL.md` (or its own skills directory). The skill's
 `description` frontmatter drives intent matching.
 
+### MCP clients (alternative)
+
+Prefer MCP over shelling out to the CLI? ResumeForge also ships a local stdio MCP
+server (`pip install "resumeforge[mcp]"`) exposing the same operations as typed tools.
+Register `{"mcpServers": {"resumeforge": {"command": "resumeforge-mcp"}}}` — see the
+root README's "MCP server" section.
+
 ## Requirements
 
 - Python 3.11+ and the `resumeforge` CLI on PATH.
