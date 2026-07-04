@@ -68,6 +68,12 @@ resumeforge roast   --resume cv.pdf           # brutally honest [ROAST] → [FIX
 resumeforge cold-read --resume cv.pdf --jd job.txt   # zero-context recruiter read
 resumeforge gap --github <user> --resume cv.pdf --jd job.txt   # what your résumé misses vs your GitHub
 resumeforge receipt --last                    # compression receipt for the most recent run
+
+# git for your résumé — keep tailored forks and diff them
+resumeforge tailor --jd ml_job.txt --branch ml-research   # saves the result as a branch
+resumeforge branch new quant --from ml-research           # fork (or --from-file cv.tex / --from-run <id>)
+resumeforge branch list
+resumeforge diff ml-research quant                        # unified diff of two branches' .tex
 ```
 
 Each `tailor` run writes its artifacts (`resume.tex`, `resume.pdf`, `receipt.json`, optional `cold-read.json`) to `~/.resumeforge/runs/<run-id>/`. Every feature reuses the free multi-provider cascade — no paid key required.
