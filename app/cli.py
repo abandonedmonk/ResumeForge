@@ -4,14 +4,22 @@ A thin ``argparse`` wrapper over the existing pipeline so ResumeForge runs
 headless and installs as a ``resumeforge`` binary — in addition to the Gradio UI.
 Every subcommand reuses the same engine the UI does; there is no parallel logic.
 
-Commands (grown phase by phase):
+Commands:
     resumeforge ui         Launch the Gradio web app.
     resumeforge init       Check LaTeX + provider keys; scaffold .env.
     resumeforge tailor     Tailor a resume to a job description (headless).
+    resumeforge cold-read  Adversarial zero-context read of a resume vs a JD.
+    resumeforge roast      Brutally honest, shareable resume feedback.
+    resumeforge gap        What your resume is missing vs your GitHub.
+    resumeforge receipt    Show the compression receipt for a run.
+
+Every result-producing command accepts ``--json`` to print a single machine-readable
+JSON object to stdout (and nothing else) — this is what agent skills consume.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -22,7 +30,15 @@ if __package__ in {None, ""}:  # allow `python app/cli.py`
 from app.utils.config import ROOT_DIR, get_config, resolve_path
 
 
-# ── shared input helpers (reused by later feature subcommands) ──────────────
+# ── shared helpers ──────────────────────────────────────────────────────────
+def _emit(args: argparse.Namespace, payload: dict, human: str) -> None:
+    """Print pure JSON when ``--json`` is set, otherwise the human-readable text."""
+    if getattr(args, "json", False):
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    else:
+        print(human)
+
+
 def load_jd(value: str) -> str:
     """Resolve a ``--jd`` argument to text. A URL is passed through unchanged
     (the pipeline fetches it); an existing file is read; anything else is treated
@@ -103,7 +119,8 @@ def _cmd_init(args: argparse.Namespace) -> int:
 
 def _cmd_tailor(args: argparse.Namespace) -> int:
     from app.agent.graph import run_agent
-    from app.utils.run_store import new_run_dir
+    from app.features.receipt import build_receipt_from_state, render_receipt
+    from app.utils.run_store import new_run_dir, write_json
 
     config = get_config()
     jd_text = load_jd(args.jd)
@@ -133,32 +150,46 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
 
     (run / "resume.tex").write_text(final.get("final_tex", ""), encoding="utf-8")
     pdf_src = final.get("final_pdf_path", "")
+    pdf_out = ""
     if pdf_src and Path(pdf_src).exists():
         shutil.copy2(pdf_src, run / "resume.pdf")
-
-    from app.features.receipt import build_receipt_from_state, render_receipt
-    from app.utils.run_store import write_json
+        pdf_out = str(run / "resume.pdf")
 
     receipt = build_receipt_from_state(final)
     write_json(run / "receipt.json", receipt)
 
-    print(f"Run:  {run}")
-    print(f"ATS:  {final.get('ats_score_summary', 'n/a')}")
-    print()
-    print(render_receipt(receipt))
-
+    cold = None
     if args.cold_read:
-        from app.features.cold_read import render_cold_read, run_cold_read
+        from app.features.cold_read import run_cold_read
         from app.utils.keyword_matcher import strip_latex_commands
 
         cold = run_cold_read(strip_latex_commands(final.get("final_tex", "")), jd_text)
         write_json(run / "cold-read.json", cold)
-        print()
-        print(render_cold_read(cold))
 
-    for error in final.get("errors", []):
-        print(f"  ! {error}")
-    return 1 if final.get("errors") else 0
+    errors = final.get("errors", [])
+    payload = {
+        "run_dir": str(run),
+        "ats_summary": final.get("ats_score_summary", ""),
+        "ats_score": final.get("ats_score", {}),
+        "receipt": receipt,
+        "cold_read": cold,
+        "errors": errors,
+        "artifacts": {
+            "tex": str(run / "resume.tex"),
+            "pdf": pdf_out,
+            "receipt": str(run / "receipt.json"),
+            "cold_read": str(run / "cold-read.json") if cold is not None else "",
+        },
+    }
+
+    human_lines = [f"Run:  {run}", f"ATS:  {final.get('ats_score_summary', 'n/a')}", "", render_receipt(receipt)]
+    if cold is not None:
+        from app.features.cold_read import render_cold_read
+
+        human_lines += ["", render_cold_read(cold)]
+    human_lines += [f"  ! {error}" for error in errors]
+    _emit(args, payload, "\n".join(human_lines))
+    return 1 if errors else 0
 
 
 def _cmd_cold_read(args: argparse.Namespace) -> int:
@@ -168,15 +199,17 @@ def _cmd_cold_read(args: argparse.Namespace) -> int:
     if not jd_text:
         raise SystemExit("Provide a job description with --jd (file, URL, or text).")
     result = run_cold_read(resume_to_text(args.resume), jd_text)
-    print(render_cold_read(result))
+    _emit(args, result, render_cold_read(result))
     return 0
 
 
 def _cmd_roast(args: argparse.Namespace) -> int:
-    from app.features.roast import run_roast
+    from app.features.roast import parse_roast_pairs, run_roast
 
     jd_text = load_jd(args.jd) if args.jd else ""
-    print(run_roast(resume_to_text(args.resume), jd_text))
+    text = run_roast(resume_to_text(args.resume), jd_text)
+    payload = {"roast_text": text, "items": parse_roast_pairs(text)}
+    _emit(args, payload, text)
     return 0
 
 
@@ -190,7 +223,7 @@ def _cmd_gap(args: argparse.Namespace) -> int:
         raise SystemExit("Provide a job description with --jd (file, URL, or text).")
     token = (args.token or os.getenv("GITHUB_API_TOKEN", "")).strip()
     result = run_gap_finder(args.github, resume_to_text(args.resume), jd_text, token=token)
-    print(render_gap(result))
+    _emit(args, result, render_gap(result))
     return 0
 
 
@@ -204,12 +237,17 @@ def _cmd_receipt(args: argparse.Namespace) -> int:
     receipt_path = target / "receipt.json"
     if not receipt_path.exists():
         raise SystemExit(f"No receipt.json in {target}.")
-    print(f"Run: {target}")
-    print(render_receipt(read_json(receipt_path)))
+    data = read_json(receipt_path)
+    payload = {"run": str(target), "receipt": data}
+    _emit(args, payload, f"Run: {target}\n{render_receipt(data)}")
     return 0
 
 
 # ── parser ──────────────────────────────────────────────────────────────────
+def _add_json_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--json", action="store_true", help="Emit a machine-readable JSON object to stdout.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="resumeforge",
@@ -229,16 +267,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_tailor.add_argument("--jd", required=True, help="Job description: file path, posting URL, or raw text.")
     p_tailor.add_argument("--branch", help="Label this run (used in the run-id).")
     p_tailor.add_argument("--cold-read", action="store_true", help="Also write a zero-context cold-read.json.")
+    _add_json_flag(p_tailor)
     p_tailor.set_defaults(func=_cmd_tailor)
 
     p_cold = sub.add_parser("cold-read", help="Adversarial zero-context read of a resume vs a JD.")
     p_cold.add_argument("--resume", required=True, help="Resume file (.pdf/.tex/.md/.txt).")
     p_cold.add_argument("--jd", required=True, help="Job description: file path, posting URL, or raw text.")
+    _add_json_flag(p_cold)
     p_cold.set_defaults(func=_cmd_cold_read)
 
     p_roast = sub.add_parser("roast", help="Brutally honest, shareable resume feedback.")
     p_roast.add_argument("--resume", required=True, help="Resume file (.pdf/.tex/.md/.txt).")
     p_roast.add_argument("--jd", help="Optional JD (file/URL/text) for a fit-scoped roast.")
+    _add_json_flag(p_roast)
     p_roast.set_defaults(func=_cmd_roast)
 
     p_gap = sub.add_parser("gap", help="What your resume is missing vs your GitHub.")
@@ -246,11 +287,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_gap.add_argument("--resume", required=True, help="Resume file (.pdf/.tex/.md/.txt).")
     p_gap.add_argument("--jd", required=True, help="Job description: file path, posting URL, or raw text.")
     p_gap.add_argument("--token", help="GitHub API token (or set GITHUB_API_TOKEN) to raise rate limits.")
+    _add_json_flag(p_gap)
     p_gap.set_defaults(func=_cmd_gap)
 
     p_receipt = sub.add_parser("receipt", help="Show the compression receipt for a run.")
     p_receipt.add_argument("--run-id", help="Run id under ~/.resumeforge/runs (default: latest).")
     p_receipt.add_argument("--last", action="store_true", help="Use the most recent run (default).")
+    _add_json_flag(p_receipt)
     p_receipt.set_defaults(func=_cmd_receipt)
 
     return parser

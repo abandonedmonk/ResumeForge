@@ -5,6 +5,10 @@ maps to a merged phase on `main`.
 
 ## [Unreleased]
 
+### Phase 11 — Agent-skill distribution + JSON CLI output
+- **`--json` on every result command** (`tailor`, `roast`, `cold-read`, `gap`, `receipt`) — a single machine-readable JSON object on stdout, so agents (and scripts) can parse results. Human text stays the default.
+- **Open-Agent-Skill package** (`skill/`): `SKILL.md` (when-to-use triggers + per-command `--json` invocation + output schemas), `agents/claude.yaml` + `agents/openai.yaml`, one-command `scripts/install.sh`, and a per-agent `README.md`. Makes ResumeForge invocable from Claude Code / Codex / Gemini CLI / OpenCode — the résumé-generation upgrade that runs on the free cascade instead of the host agent's paid model.
+
 ### Phase 10 — CLI + standalone features
 - **Installable CLI** (`pipx install resumeforge`): `resumeforge {ui,init,tailor,cold-read,roast,gap,receipt}`. Runs the existing pipeline headless; the Gradio app is now `resumeforge ui`. Packaging via a proper `[build-system]` + `[project.scripts]` entry point.
 - **Compression Receipt** — every `tailor` run emits an auditable `receipt.json` (words removed, bullets strengthened/condensed, keyword deltas, semantic similarity). 0-token, local.
