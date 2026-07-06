@@ -83,6 +83,78 @@ def _semantic_context_score(keywords: list[str], bullets: list[str], skills_text
         }
 
 
+def _keyword_match_score(
+    base_keywords: list[str],
+    enriched_keywords: list[str],
+    resume_text: str,
+    synonym_map: dict[str, list[str]],
+) -> tuple[int, list[str], list[str]]:
+    """Weighted keyword coverage: required/JD keywords count full, enriched at half."""
+    matched = matched_keywords(base_keywords, resume_text, synonym_map)
+    matched_enriched = matched_keywords(enriched_keywords, resume_text, synonym_map)
+    keyword_score = int(
+        round(
+            (len(matched) + 0.5 * len(matched_enriched))
+            / max(1, len(base_keywords) + 0.5 * len(enriched_keywords))
+            * 100
+        )
+    )
+    return keyword_score, matched, matched_enriched
+
+
+def _placement_score(
+    base_keywords: list[str],
+    resume_tex: str,
+    synonym_map: dict[str, list[str]],
+) -> tuple[int, float, dict[str, str]]:
+    """Zone-weighted keyword placement: keywords in the headline/skills/first bullets
+    count for more than the same keyword buried further down."""
+    zones = identify_high_value_zones(resume_tex)
+    zone_weights = {"headline": 3.0, "skills": 2.0, "first_bullets": 1.5}
+    weighted_hits = 0.0
+    max_weight = float(len(base_keywords)) * sum(zone_weights.values())
+    for keyword in base_keywords:
+        for zone_name, zone_text in zones.items():
+            if find_keyword_in_text(keyword, zone_text, synonym_map):
+                weighted_hits += zone_weights[zone_name]
+    placement_score = int(round((weighted_hits / max(1.0, max_weight)) * 100))
+    return placement_score, weighted_hits, zones
+
+
+def _impact_metrics_score(bullets: list[str]) -> tuple[int, int]:
+    """Share of bullets carrying a quantified metric, targeting ~60% coverage."""
+    metrics_bullets = sum(1 for bullet in bullets if extract_metrics_from_bullet(bullet))
+    target_metrics = max(1, int(round(len(bullets) * 0.6)))
+    impact_score = int(round(min(metrics_bullets / target_metrics, 1.0) * 100))
+    return impact_score, metrics_bullets
+
+
+def _skills_gap(
+    jd_analysis: dict[str, Any],
+    enriched_keywords: list[str],
+    resume_text: str,
+    synonym_map: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """JD skills (required / nice-to-have / enriched) with no evidence in the resume."""
+    missing_required = [
+        skill for skill in jd_analysis.get("required_skills", [])
+        if not find_keyword_in_text(skill, resume_text, synonym_map)
+    ]
+    missing_nice = [
+        skill for skill in jd_analysis.get("nice_to_have", [])
+        if not find_keyword_in_text(skill, resume_text, synonym_map)
+    ]
+    missing_enriched = [
+        skill for skill in enriched_keywords
+        if not find_keyword_in_text(skill, resume_text, synonym_map)
+    ]
+    return {
+        "missing_required": missing_required,
+        "missing_nice_to_have": missing_nice,
+        "missing_enriched": missing_enriched,
+    }
+
+
 def _recommendations(scorecard: dict[str, object]) -> list[str]:
     recommendations: list[str] = []
     keyword_score = int(scorecard["keyword_match"]["score"])
@@ -125,17 +197,8 @@ def compute_ats_score(
     )
     enriched_keywords = _dedupe_keywords(list(jd_analysis.get("enriched_keywords", [])))
 
-    matched = matched_keywords(base_keywords, resume_text, synonym_map)
-    matched_enriched = matched_keywords(enriched_keywords, resume_text, synonym_map)
-    keyword_score = int(
-        round(
-            (
-                len(matched)
-                + 0.5 * len(matched_enriched)
-            )
-            / max(1, len(base_keywords) + 0.5 * len(enriched_keywords))
-            * 100
-        )
+    keyword_score, matched, matched_enriched = _keyword_match_score(
+        base_keywords, enriched_keywords, resume_text, synonym_map
     )
 
     sections = split_sections(resume_tex)
@@ -146,32 +209,9 @@ def compute_ats_score(
         log_error(state, f"ATS semantic scoring fallback used: {semantic['error']}")
 
     section_quality = section_quality_snapshot(resume_tex)
-    zones = identify_high_value_zones(resume_tex)
-    zone_weights = {"headline": 3.0, "skills": 2.0, "first_bullets": 1.5}
-    weighted_hits = 0.0
-    max_weight = float(len(base_keywords)) * sum(zone_weights.values())
-    for keyword in base_keywords:
-        for zone_name, zone_text in zones.items():
-            if find_keyword_in_text(keyword, zone_text, synonym_map):
-                weighted_hits += zone_weights[zone_name]
-    placement_score = int(round((weighted_hits / max(1.0, max_weight)) * 100))
-
-    metrics_bullets = sum(1 for bullet in bullets if extract_metrics_from_bullet(bullet))
-    target_metrics = max(1, int(round(len(bullets) * 0.6)))
-    impact_score = int(round(min(metrics_bullets / target_metrics, 1.0) * 100))
-
-    missing_required = [
-        skill for skill in jd_analysis.get("required_skills", [])
-        if not find_keyword_in_text(skill, resume_text, synonym_map)
-    ]
-    missing_nice = [
-        skill for skill in jd_analysis.get("nice_to_have", [])
-        if not find_keyword_in_text(skill, resume_text, synonym_map)
-    ]
-    missing_enriched = [
-        skill for skill in enriched_keywords
-        if not find_keyword_in_text(skill, resume_text, synonym_map)
-    ]
+    placement_score, weighted_hits, zones = _placement_score(base_keywords, resume_tex, synonym_map)
+    impact_score, metrics_bullets = _impact_metrics_score(bullets)
+    skills_gap = _skills_gap(jd_analysis, enriched_keywords, resume_text, synonym_map)
 
     if weights is None:
         weights = {**DEFAULT_ATS_WEIGHTS, **get_config().get("ats_score_weights", {})}
@@ -185,11 +225,6 @@ def compute_ats_score(
         )
     )
 
-    skills_gap = {
-        "missing_required": missing_required,
-        "missing_nice_to_have": missing_nice,
-        "missing_enriched": missing_enriched,
-    }
     return {
         "overall": overall,
         "keyword_match": {

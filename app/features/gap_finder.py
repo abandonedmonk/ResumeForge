@@ -12,13 +12,12 @@ not new infrastructure.
 """
 from __future__ import annotations
 
-import json
 import re
 
 from app.integrations.github import fetch_repo, fetch_user_repos
 from app.llm.router import RoutedStage1Model
 from app.prompts.gap import build_gap_prompt
-from app.utils.json_utils import extract_json_blob
+from app.utils.json_utils import parse_json_object
 from app.utils.keyword_matcher import build_synonym_map, find_keyword_in_text
 
 # Common JD words that carry no filtering signal.
@@ -116,10 +115,7 @@ def analyze_gap(inventory: str, resume_text: str) -> dict:
     lists on a malformed response so callers always get the full shape."""
     system_prompt, user_prompt = build_gap_prompt(inventory, resume_text)
     raw = RoutedStage1Model(task="gap_analysis").call(system_prompt, user_prompt)
-    try:
-        payload = json.loads(extract_json_blob(raw))
-    except json.JSONDecodeError:
-        payload = {}
+    payload = parse_json_object(raw)
     keys = ("missing", "undersold", "overclaimed", "suggested_bullets")
     return {key: [str(item) for item in (payload.get(key) or [])] for key in keys}
 

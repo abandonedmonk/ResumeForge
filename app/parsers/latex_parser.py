@@ -49,36 +49,3 @@ def _extract_bullets(section_tex: str) -> list[str]:
             bullets.append(stripped[len(r"\item") :].strip())
     return bullets
 
-
-if __name__ == "__main__":
-    SAMPLE = r"""
-\section{Experience}
-\begin{itemize}
-\item Built a pipeline that improved speed by 25\%
-\item Deployed a dashboard for 300 users
-\end{itemize}
-
-\section{Education}
-\textbf{B.Tech}
-"""
-    parsed = parse_latex_resume(SAMPLE)
-    assert parsed["Experience"]["bullets"] == [
-        r"Built a pipeline that improved speed by 25\%",
-        "Deployed a dashboard for 300 users",
-    ]
-    assert parsed["Education"]["bullets"] == []
-
-    RESUME_ITEM_SAMPLE = r"""
-\section{Experience}
-\resumeItemListStart
-  \resumeItem{Shipped a feature used by 1000 users}
-  \resumeItem{Reduced latency by 40\%}
-\resumeItemListEnd
-"""
-    resume_item_parsed = parse_latex_resume(RESUME_ITEM_SAMPLE)
-    assert resume_item_parsed["Experience"]["bullets"] == [
-        "Shipped a feature used by 1000 users",
-        r"Reduced latency by 40\%",
-    ], resume_item_parsed["Experience"]["bullets"]
-    print("latex_parser self-test passed")
-

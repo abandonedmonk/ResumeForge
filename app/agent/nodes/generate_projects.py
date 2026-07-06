@@ -55,6 +55,172 @@ def _fallback_projects(projects_context: dict[str, dict[str, object]], limit: in
     return projects
 
 
+def _stage1_select(
+    state: ResumeState,
+    projects_context: dict[str, dict[str, object]],
+    max_skills: int,
+    max_projects: int,
+    skills_gap: dict | None,
+) -> tuple[list[dict[str, object]], list, dict]:
+    """Stage 1 (reasoning): pick the best-fit projects + skill categories for the JD.
+
+    Returns the writer-ready project payloads, the selected skill categories, and the
+    selection reasoning. Raises on a malformed model response so the caller's fallback
+    path takes over."""
+    log_status(state, "Stage 1: Selecting best-fit projects and skill categories...")
+    sel_sys, sel_user = build_selection_prompt(
+        state["skills_md"],
+        state["jd_analysis"],
+        projects_context,
+        max_skills=max_skills,
+        max_projects=max_projects,
+        skills_gap=skills_gap,
+    )
+    sel_response = RoutedModel("stage1", task="project_selection").call(sel_sys, sel_user)
+    sel_payload = json.loads(extract_json_blob(sel_response))
+
+    selected_keys = sel_payload.get("selected_project_keys", [])
+    selected_skills = sel_payload.get("selected_skill_categories", [])
+    selection_reasoning = sel_payload.get("selection_reasoning", {})
+
+    selected_projects_data: list[dict[str, object]] = []
+    for key in selected_keys:
+        p = projects_context.get(key)
+        if p:
+            selected_projects_data.append({
+                "key": key,
+                "title": p.get("heading", key),
+                "tech_stack": p.get("tech_stack", []),
+                "keywords": p.get("keywords", []),
+                "bullets": p.get("bullets", []),
+                "body": p.get("body", ""),
+                "summary": p.get("summary", ""),
+                "url": p.get("url", ""),
+                "date_range": p.get("date_range", "Month Year -- Month Year")
+            })
+    return selected_projects_data, selected_skills, selection_reasoning
+
+
+def _budget_project_bodies(selected_projects_data: list[dict[str, object]], budget: dict) -> None:
+    """Trim each project body to the writer's input budget *before* prompting, so a
+    Groq-only run (≈12k cap) never 413s on long READMEs. With a big-context writer
+    (Gemini) the per-project budget is huge and nothing is trimmed."""
+    if not selected_projects_data:
+        return
+    gen_chain = resolve_task_chain("project_generation", tier_chain(budget), budget)
+    writer = gen_chain[0] if gen_chain else "groq"
+    writer_budget = limits_for(provider_model(writer, budget), budget)["max_input_tokens"]
+    # Reserve room for JD analysis, skills, and instructions in the same prompt.
+    body_pool = max(1000, writer_budget - 4000)
+    per_project = body_pool // len(selected_projects_data)
+    for p in selected_projects_data:
+        p["body"] = trim_to_budget(str(p.get("body", "")), per_project)
+
+
+def _stage2_generate(
+    state: ResumeState,
+    selected_projects_data: list[dict[str, object]],
+    selected_skills: list,
+    max_bullets: int,
+    skills_gap: dict | None,
+    recommendations: list | None,
+) -> dict:
+    """Stage 2 (writing): produce the tailored headline, bullets, and skill lists.
+
+    Returns the raw generation payload. Raises on a malformed response so the caller's
+    fallback path takes over."""
+    log_status(state, "Stage 2: Writing tailored headline, bullets, and skill lists...")
+    gen_sys, gen_user = build_generation_prompt(
+        state["skills_md"],
+        state["jd_analysis"],
+        selected_projects_data,
+        selected_skills,
+        max_bullets_per_project=max_bullets,
+        skills_gap=skills_gap,
+        recommendations=recommendations,
+    )
+    gen_response = RoutedModel("stage2", task="project_generation").call(gen_sys, gen_user)
+    return json.loads(extract_json_blob(gen_response))
+
+
+def _build_skills(gen_payload: dict) -> list[dict[str, object]]:
+    """Normalise and de-duplicate skill categories across the whole list (a skill only
+    appears in the first category that claims it)."""
+    raw_skills = [
+        {
+            "category": str(category.get("category", "")).strip(),
+            "items": [str(item).strip() for item in category.get("items", []) if str(item).strip()],
+        }
+        for category in gen_payload.get("skills", [])
+        if isinstance(category, dict)
+    ]
+    seen: set[str] = set()
+    deduped_skills: list[dict[str, object]] = []
+    for cat in raw_skills:
+        unique_items: list[str] = []
+        for item in cat["items"]:
+            # Normalise: lowercase + strip anything after the first '(' for fuzzy matching
+            key = item.lower().split("(")[0].strip()
+            if key not in seen:
+                seen.add(key)
+                unique_items.append(item)
+        if unique_items:
+            deduped_skills.append({"category": cat["category"], "items": unique_items})
+    return deduped_skills
+
+
+def _build_projects(
+    gen_payload: dict,
+    selected_projects_data: list[dict[str, object]],
+    selection_reasoning: dict,
+) -> list[dict[str, object]]:
+    """Merge the writer's project output with the selected source metadata (url, dates)."""
+    formatted_projects: list[dict[str, object]] = []
+    for index, project in enumerate(gen_payload.get("projects", [])):
+        if not isinstance(project, dict):
+            continue
+        source_project = selected_projects_data[index] if index < len(selected_projects_data) else {}
+        formatted_projects.append(
+            {
+                "title": str(project.get("title", "")).strip() or str(source_project.get("title", "")).strip(),
+                "bullets": [str(bullet).strip() for bullet in project.get("bullets", []) if str(bullet).strip()],
+                "date_range": str(project.get("date_range", "")).strip()
+                or str(source_project.get("date_range", "")).strip()
+                or "Month Year -- Month Year",
+                "url": str(source_project.get("url", "")).strip(),
+                "selection_reason": selection_reasoning.get("projects", "Selected for JD relevance."),
+            }
+        )
+    return formatted_projects
+
+
+def _append_change_logs(state: ResumeState) -> None:
+    """Record the Headline / Skills / Projects entries this node owns in the changes log."""
+    notes = state["personalization_notes"]
+    if state["generated_headline"]:
+        state["changes_log"].append({
+            "section": "Headline",
+            "old_bullets": [], "new_bullets": [state["generated_headline"]],
+            "reasoning": notes["headline_reason"]
+        })
+
+    if state["generated_skills"]:
+        state["changes_log"].append({
+            "section": "Skills",
+            "old_bullets": [],
+            "new_bullets": [f"{c['category']}: {', '.join(c['items'])}" for c in state["generated_skills"]],
+            "reasoning": notes["skills_reason"]
+        })
+
+    if state["generated_projects"]:
+        state["changes_log"].append({
+            "section": "Projects",
+            "old_bullets": [],
+            "new_bullets": [f"{p['title']}: {' | '.join(p['bullets'])}" for p in state["generated_projects"]],
+            "reasoning": notes["project_selection_reason"]
+        })
+
+
 def generate_projects(state: ResumeState) -> ResumeState:
     log_status(state, "Starting two-stage personalization (Selection -> Writing)...")
     projects_context = state["projects_context"]
@@ -81,110 +247,19 @@ def generate_projects(state: ResumeState) -> ResumeState:
 
     try:
         # --- Stage 1: Selection (Reasoning) ---
-        log_status(state, "Stage 1: Selecting best-fit projects and skill categories...")
-        sel_sys, sel_user = build_selection_prompt(
-            state["skills_md"],
-            state["jd_analysis"],
-            projects_context,
-            max_skills=max_skills,
-            max_projects=max_projects,
-            skills_gap=skills_gap,
+        selected_projects_data, selected_skills, selection_reasoning = _stage1_select(
+            state, projects_context, max_skills, max_projects, skills_gap
         )
-        sel_response = RoutedModel("stage1", task="project_selection").call(sel_sys, sel_user)
-        sel_payload = json.loads(extract_json_blob(sel_response))
-        
-        selected_keys = sel_payload.get("selected_project_keys", [])
-        selected_skills = sel_payload.get("selected_skill_categories", [])
-        selection_reasoning = sel_payload.get("selection_reasoning", {})
-
-        # Prepare context for Stage 2
-        selected_projects_data = []
-        for key in selected_keys:
-            p = projects_context.get(key)
-            if p:
-                selected_projects_data.append({
-                    "key": key,
-                    "title": p.get("heading", key),
-                    "tech_stack": p.get("tech_stack", []),
-                    "keywords": p.get("keywords", []),
-                    "bullets": p.get("bullets", []),
-                    "body": p.get("body", ""),
-                    "summary": p.get("summary", ""),
-                    "url": p.get("url", ""),
-                    "date_range": p.get("date_range", "Month Year -- Month Year")
-                })
-        
-        # Budget the project bodies to the writer's input limit *before* prompting, so a
-        # Groq-only run (≈12k cap) never 413s on long READMEs. With a big-context writer
-        # (Gemini) the per-project budget is huge and nothing is trimmed.
-        if selected_projects_data:
-            gen_chain = resolve_task_chain("project_generation", tier_chain(budget), budget)
-            writer = gen_chain[0] if gen_chain else "groq"
-            writer_budget = limits_for(provider_model(writer, budget), budget)["max_input_tokens"]
-            # Reserve room for JD analysis, skills, and instructions in the same prompt.
-            body_pool = max(1000, writer_budget - 4000)
-            per_project = body_pool // len(selected_projects_data)
-            for p in selected_projects_data:
-                p["body"] = trim_to_budget(str(p.get("body", "")), per_project)
+        _budget_project_bodies(selected_projects_data, budget)
 
         # --- Stage 2: Generation (Writing) ---
-        log_status(state, "Stage 2: Writing tailored headline, bullets, and skill lists...")
-        gen_sys, gen_user = build_generation_prompt(
-            state["skills_md"],
-            state["jd_analysis"],
-            selected_projects_data,
-            selected_skills,
-            max_bullets_per_project=max_bullets,
-            skills_gap=skills_gap,
-            recommendations=recommendations,
+        gen_payload = _stage2_generate(
+            state, selected_projects_data, selected_skills, max_bullets, skills_gap, recommendations
         )
-        gen_response = RoutedModel("stage2", task="project_generation").call(gen_sys, gen_user)
-        gen_payload = json.loads(extract_json_blob(gen_response))
 
         state["generated_headline"] = str(gen_payload.get("headline", "")).strip()
-
-        # Format Skills — then deduplicate across categories
-        raw_skills = [
-            {
-                "category": str(category.get("category", "")).strip(),
-                "items": [str(item).strip() for item in category.get("items", []) if str(item).strip()],
-            }
-            for category in gen_payload.get("skills", [])
-            if isinstance(category, dict)
-        ]
-        seen: set[str] = set()
-        deduped_skills: list[dict[str, object]] = []
-        for cat in raw_skills:
-            unique_items: list[str] = []
-            for item in cat["items"]:
-                # Normalise: lowercase + strip anything after the first '(' for fuzzy matching
-                key = item.lower().split("(")[0].strip()
-                if key not in seen:
-                    seen.add(key)
-                    unique_items.append(item)
-            if unique_items:
-                deduped_skills.append({"category": cat["category"], "items": unique_items})
-        state["generated_skills"] = deduped_skills
-
-        # Format Projects
-        formatted_projects: list[dict[str, object]] = []
-        for index, project in enumerate(gen_payload.get("projects", [])):
-            if not isinstance(project, dict):
-                continue
-            source_project = selected_projects_data[index] if index < len(selected_projects_data) else {}
-            formatted_projects.append(
-                {
-                    "title": str(project.get("title", "")).strip() or str(source_project.get("title", "")).strip(),
-                    "bullets": [str(bullet).strip() for bullet in project.get("bullets", []) if str(bullet).strip()],
-                    "date_range": str(project.get("date_range", "")).strip()
-                    or str(source_project.get("date_range", "")).strip()
-                    or "Month Year -- Month Year",
-                    "url": str(source_project.get("url", "")).strip(),
-                    "selection_reason": selection_reasoning.get("projects", "Selected for JD relevance."),
-                }
-            )
-        state["generated_projects"] = formatted_projects
-
+        state["generated_skills"] = _build_skills(gen_payload)
+        state["generated_projects"] = _build_projects(gen_payload, selected_projects_data, selection_reasoning)
         state["personalization_notes"] = {
             "drafting_notes": str(gen_payload.get("drafting_notes", "")).strip(),
             "headline_reason": "Generated for JD relevance.",
@@ -207,27 +282,5 @@ def generate_projects(state: ResumeState) -> ResumeState:
     state["generated_skills"] = state["generated_skills"][:max_skills]
     state["generated_projects"] = state["generated_projects"][:max_projects]
 
-    if state["generated_headline"]:
-        state["changes_log"].append({
-            "section": "Headline",
-            "old_bullets": [], "new_bullets": [state["generated_headline"]],
-            "reasoning": state["personalization_notes"]["headline_reason"]
-        })
-
-    if state["generated_skills"]:
-        state["changes_log"].append({
-            "section": "Skills",
-            "old_bullets": [],
-            "new_bullets": [f"{c['category']}: {', '.join(c['items'])}" for c in state["generated_skills"]],
-            "reasoning": state["personalization_notes"]["skills_reason"]
-        })
-
-    if state["generated_projects"]:
-        state["changes_log"].append({
-            "section": "Projects",
-            "old_bullets": [],
-            "new_bullets": [f"{p['title']}: {' | '.join(p['bullets'])}" for p in state["generated_projects"]],
-            "reasoning": state["personalization_notes"]["project_selection_reason"]
-        })
-
+    _append_change_logs(state)
     return state
