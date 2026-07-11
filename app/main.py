@@ -10,6 +10,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.agent.graph import run_agent
+from app.parsers.template_registry import list_templates
 from app.ui.actions import (
     _append_skills_to_file,
     _apply_ai_edit_request,
@@ -71,7 +72,14 @@ def build_ui() -> gr.Blocks:
                             clear_jd_button.click(fn=lambda: "", outputs=jd_text_input)
 
                         # ── Other inputs ───────────────────────────────────────────
-                        gr.Markdown(f"Template: `{resolve_path(config['default_resume_tex'])}`")
+                        _templates = list_templates()
+                        _tpl_default = config.get("resume_template", "classic")
+                        resume_template = gr.Dropdown(
+                            label="Resume Template",
+                            choices=_templates or [_tpl_default],
+                            value=_tpl_default if _tpl_default in _templates else (_templates[0] if _templates else _tpl_default),
+                            info="Layout under templates/. Ignored if a personal/custom .tex template is configured.",
+                        )
                         gr.Markdown(f"Projects Inventory: `{resolve_path(config['default_projects_md'])}`")
                         output_folder = gr.Textbox(
                             label="Output Folder",
@@ -79,12 +87,12 @@ def build_ui() -> gr.Blocks:
                         )
                         stage1_model = gr.Dropdown(
                             label="Stage 1 Model (Selection)",
-                            choices=["groq", "openrouter", "gemini", "cohere", "copilot", "openai", "anthropic"],
+                            choices=["groq", "openrouter", "gemini", "cohere", "copilot", "openai", "anthropic", "mistral", "deepseek", "together", "xai", "ollama"],
                             value=config.get("stage1_model", "groq"),
                         )
                         stage2_model = gr.Dropdown(
                             label="Stage 2 Model (Writing)",
-                            choices=["groq", "cohere", "openrouter", "gemini", "copilot", "openai", "anthropic"],
+                            choices=["groq", "cohere", "openrouter", "gemini", "copilot", "openai", "anthropic", "mistral", "deepseek", "together", "xai", "ollama"],
                             value=config.get("stage2_model", "groq"),
                         )
                         enrich_toggle = gr.Checkbox(
@@ -280,7 +288,7 @@ def build_ui() -> gr.Blocks:
 
         run_button.click(
             fn=_run_resumeforge,
-            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key, cover_letter_toggle],
+            inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key, cover_letter_toggle, resume_template],
             outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store, cover_letter_md, docx_file],
         )
         apply_edit_button.click(

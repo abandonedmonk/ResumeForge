@@ -21,6 +21,7 @@ _DEFAULTS = {
     "max_projects": 3,
     "max_skills": 4,
     "max_bullets_per_project": 3,
+    "allow_two_pages": False,
     "description": "",
 }
 
@@ -33,6 +34,7 @@ class TemplateConfig:
     max_projects: int = 3
     max_skills: int = 4
     max_bullets_per_project: int = 3
+    allow_two_pages: bool = False
     description: str = ""
 
     @property
@@ -69,5 +71,6 @@ def load_template(name: str | None) -> TemplateConfig | None:
         max_projects=int(meta.get("max_projects", 3)),
         max_skills=int(meta.get("max_skills", 4)),
         max_bullets_per_project=int(meta.get("max_bullets_per_project", 3)),
+        allow_two_pages=bool(meta.get("allow_two_pages", False)),
         description=str(meta.get("description", "")),
     )

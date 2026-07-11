@@ -7,10 +7,13 @@ from app.llm.anthropic_claude import AnthropicClaude
 from app.llm.base import BaseLLM
 from app.llm.cohere import CohereCommandR
 from app.llm.copilot import CopilotModels
+from app.llm.deepseek import DeepSeekModel
 from app.llm.gemini import GeminiFlash
 from app.llm.groq import GroqModel
 from app.llm.keypool import PROVIDER_ENV, ordered_keys
+from app.llm.mistral import MistralModel
 from app.llm.model_limits import estimate_tokens, limits_for, provider_model, trim_to_budget
+from app.llm.ollama import OllamaLocal
 from app.llm.openai_gpt import OpenAIGPT
 from app.llm.openrouter import OpenRouterFree
 from app.llm.task_routing import (
@@ -21,6 +24,8 @@ from app.llm.task_routing import (
     task_is_large_context,
     tier_chain,
 )
+from app.llm.together import TogetherModel
+from app.llm.xai import XAIModel
 from app.utils.config import get_config
 from app.utils.exceptions import ConfigError, LLMError, RateLimitError
 
@@ -44,6 +49,11 @@ _PROVIDERS: dict[str, type[BaseLLM]] = {
     "gemini": GeminiFlash,
     "openai": OpenAIGPT,
     "anthropic": AnthropicClaude,
+    "mistral": MistralModel,
+    "deepseek": DeepSeekModel,
+    "together": TogetherModel,
+    "xai": XAIModel,
+    "ollama": OllamaLocal,
 }
 
 

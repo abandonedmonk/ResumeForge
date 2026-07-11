@@ -28,6 +28,20 @@ openai_model: "gpt-4o"             # premium tier
 anthropic_model: "claude-sonnet-4-6"  # premium tier
 anthropic_max_tokens: 4096
 
+# Additional OpenAI-compatible providers (bring-your-own key). Not in any default
+# chain — enable one by adding its name to a chain above or naming it as a
+# stage/task provider (e.g. stage1_model: "mistral"). Keys: MISTRAL_API_KEY,
+# DEEPSEEK_API_KEY, TOGETHER_API_KEY, XAI_API_KEY.
+mistral_model: "mistral-large-latest"
+deepseek_model: "deepseek-chat"
+together_model: "meta-llama/Llama-3.3-70B-Instruct-Turbo"
+xai_model: "grok-2-latest"
+# Local models via Ollama (no key; runs fully offline). Enable by setting
+# OLLAMA_BASE_URL in .env (e.g. http://localhost:11434/v1), then point a stage or
+# chain at "ollama", e.g. stage1_model: "ollama" and stage2_model: "ollama".
+# The model must be pulled first: `ollama pull llama3.1`.
+ollama_model: "llama3.1"
+
 # Task-aware routing (auto by default): each pipeline task is sent to the best
 # provider that actually has a key. Defaults — analyze_jd→groq · ats_scoring→gemini
 # · project_selection→groq · project_generation→groq · tailor→groq · cover_letter→groq

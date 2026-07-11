@@ -22,6 +22,13 @@ PROVIDER_ENV: dict[str, str] = {
     "copilot": "GITHUB_TOKEN",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "together": "TOGETHER_API_KEY",
+    "xai": "XAI_API_KEY",
+    # Ollama is keyless/local: its base URL doubles as the availability signal, so a
+    # provider only becomes "live" (and routable) once OLLAMA_BASE_URL is set.
+    "ollama": "OLLAMA_BASE_URL",
 }
 
 _lock = threading.Lock()

@@ -1,0 +1,8 @@
+{
+  "name": "bio",
+  "description": "Biology / life-sciences resume — laboratory skills, research experience, and a publications section.",
+  "compiler": "pdflatex",
+  "max_projects": 3,
+  "max_skills": 5,
+  "max_bullets_per_project": 3
+}

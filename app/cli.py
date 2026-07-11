@@ -143,6 +143,17 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
             )
         original_tex = str(resolve_path(str(resume_path)))
 
+    if getattr(args, "template", None):
+        from app.parsers.template_registry import list_templates
+        from app.utils.config import update_session_overrides
+
+        available = list_templates()
+        if args.template not in available:
+            raise SystemExit(
+                f"Unknown template '{args.template}'. Available: {', '.join(available) or '(none)'}."
+            )
+        update_session_overrides({"resume_template": args.template})
+
     payload = run_tailor(jd_text, original_tex, branch=args.branch or "", cold_read=args.cold_read)
     _emit(args, payload, render_tailor(payload))
     return 1 if payload["errors"] else 0
@@ -301,6 +312,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_tailor = sub.add_parser("tailor", help="Tailor a resume to a job description.")
     p_tailor.add_argument("--resume", help="Path to a .tex template (optional; defaults to configured template).")
+    p_tailor.add_argument("--template", help="Named template under templates/ (e.g. classic, modern, cs, bio, academia).")
     p_tailor.add_argument("--jd", required=True, help="Job description: file path, posting URL, or raw text.")
     p_tailor.add_argument("--branch", help="Label this run (used in the run-id).")
     p_tailor.add_argument("--cold-read", action="store_true", help="Also write a zero-context cold-read.json.")

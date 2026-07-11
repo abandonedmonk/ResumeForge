@@ -49,11 +49,13 @@ def load_inputs(state: ResumeState) -> ResumeState:
     explicit_tex = state.get("original_resume_tex") or resolve_resume_tex_source(
         config.get("default_resume_tex", "")
     )
+    template_allow_two_pages = False
     if not explicit_tex:
         template = load_template(config.get("resume_template", "classic"))
         if template is not None:
             state["original_resume_tex"] = template.tex
             state["resume_template"] = template.name
+            template_allow_two_pages = template.allow_two_pages
             update_session_overrides(
                 {
                     "max_projects": template.max_projects,
@@ -67,9 +69,14 @@ def load_inputs(state: ResumeState) -> ResumeState:
     else:
         state["resume_template"] = "custom"
 
-    # Decide the page budget: one page unless 10+ years experience or an explicit opt-in.
+    # Decide the page budget: one page unless 10+ years experience, an explicit opt-in,
+    # or the selected template itself is a multi-page layout (e.g. an academic CV).
     years = int(state.get("candidate_years_experience") or config.get("candidate_years_experience", 0) or 0)
-    allow_two = bool(state.get("allow_two_pages") or config.get("allow_two_pages", False))
+    allow_two = bool(
+        state.get("allow_two_pages")
+        or config.get("allow_two_pages", False)
+        or template_allow_two_pages
+    )
     state["candidate_years_experience"] = years
     state["allow_two_pages"] = allow_two
     state["max_pages"] = 2 if (allow_two or years >= 10) else 1

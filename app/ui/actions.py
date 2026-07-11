@@ -55,17 +55,19 @@ def _run_resumeforge(
     openai_key: str = "",
     anthropic_key: str = "",
     generate_cover_letter: bool = False,
+    resume_template: str = "",
 ):
     set_session_keys({"OPENAI_API_KEY": openai_key, "ANTHROPIC_API_KEY": anthropic_key})
-    set_session_overrides(
-        {
-            "stage1_model": stage1_model,
-            "stage2_model": stage2_model,
-            "enrich_with_web_search": enrich_with_web_search,
-            "model_tier": model_tier,
-            "generate_cover_letter": generate_cover_letter,
-        }
-    )
+    overrides = {
+        "stage1_model": stage1_model,
+        "stage2_model": stage2_model,
+        "enrich_with_web_search": enrich_with_web_search,
+        "model_tier": model_tier,
+        "generate_cover_letter": generate_cover_letter,
+    }
+    if resume_template:
+        overrides["resume_template"] = resume_template
+    set_session_overrides(overrides)
     try:
         return _run_resumeforge_inner(output_folder, jd_text_override)
     finally:

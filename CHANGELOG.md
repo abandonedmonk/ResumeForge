@@ -5,6 +5,19 @@ maps to a merged phase on `main`.
 
 ## [Unreleased]
 
+### Phase 14 — More providers, offline (Ollama) + field templates
+- **More LLM providers** — bring-your-own-key **Mistral, DeepSeek, Together AI, and xAI (Grok)**, plus
+  **fully-offline [Ollama](https://ollama.com)** (no key, local). All speak the OpenAI chat-completions
+  protocol through a shared `app/llm/openai_compatible.py` base, so each provider is a few lines of
+  config. Registered in the router/keypool and selectable per stage (`stage1_model`/`stage2_model`) or
+  in the UI; Ollama is gated on `OLLAMA_BASE_URL` so a local server is never dialed unless configured.
+- **Templates for every field** — new `cs`, `bio`, and a multi-page `academia` CV alongside `classic`
+  and `modern`; pick one in the UI dropdown, via `resume_template` in `config.yaml`, or with the new
+  `--template` flag on `tailor`. Templates can opt into two pages via an `allow_two_pages` config knob.
+- Refactor: folded the pre-existing `openrouter`/`copilot` providers onto the shared
+  `OpenAICompatibleLLM` base (removed ~86 lines of duplicated `call()` boilerplate); added
+  `tests/test_openai_compatible.py` covering base-URL resolution, key handling, and model precedence.
+
 ### Phase 13 — Local MCP server
 - **Optional stdio MCP server** (`pip install "resumeforge[mcp]"`, run as `resumeforge-mcp`) exposing
   six typed tools — `compile_latex`, `tailor_resume`, `roast_resume`, `cold_read`, `find_github_gap`,

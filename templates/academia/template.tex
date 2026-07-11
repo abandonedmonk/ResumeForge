@@ -1,0 +1,143 @@
+%-------------------------
+% ResumeForge — "Academia" academic CV template (multi-page by design)
+% Research interests, publications, teaching, and grants. Replace the identity /
+% education / research blocks with your own.
+% Do NOT remove the % PLACEHOLDER_* markers — ResumeForge injects content there.
+% This template opts into two pages via config.json ("allow_two_pages": true).
+%-------------------------
+\documentclass[letterpaper,10pt]{article}
+\usepackage{anyfontsize}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{soul}
+\geometry{
+  top=0.6in,
+  bottom=0.6in,
+  left=0.7in,
+  right=0.7in
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+% Section formatting
+\titleformat{\section}{
+  \vspace{-1pt}\scshape\bfseries\raggedright\large
+}{}{0em}{\MakeUppercase}[\color{black}\titlerule \vspace{0pt}]
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item{\small\setlength{\baselineskip}{11pt} #1 \vspace{-2pt}}
+}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{\textwidth}[t]{@{}p{0.75\textwidth}@{\extracolsep{\fill}}r@{}}
+      \textbf{#1} & \small #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+      \small#1 & \small\textit{#2} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, label={$\bullet$}, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+%-------------------------------------------
+\begin{document}
+\fontsize{10.5}{12}\selectfont
+%----------HEADING----------
+\begin{center}
+    {\Huge \scshape \textbf{Your Name}} \\ \vspace{4pt}
+    \href{mailto:you@example.com}{\ul{you@example.com}} $|$
+    \href{https://scholar.google.com/citations?user=XXXX}{\ul{Google Scholar}} $|$
+    \href{https://orcid.org/0000-0000-0000-0000}{\ul{ORCID}} $|$
+    +1 555 555 5555 \\ \vspace{6pt}
+    {Professional summary goes here — ResumeForge replaces this line with a JD-tailored headline.}
+\end{center}
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Your University, City}{}
+    {Ph.D. in Field}{\textit{Year -- Year (expected)}}  \vspace{-5pt}
+  \resumeSubheading
+    {Your University, City}{}
+    {M.S. / B.S. in Field}{\textit{Year -- Year}}
+\resumeSubHeadingListEnd
+%-----------RESEARCH INTERESTS-----------
+\section{Research Interests}
+\resumeSubHeadingListStart
+  \resumeItem{Concise list of your research areas, methods, and questions of interest.}
+\resumeSubHeadingListEnd
+%-----------EXPERIENCE-----------
+\section{Research Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Lab / Institution Name}{Location}
+    {Graduate Research Assistant}{Month Year -- Present}
+    \resumeItemListStart
+      \resumeItem{Framed a research question and reported a result with method and metric.}
+      \resumeItem{Describe a second contribution; ResumeForge will tailor these bullets to the JD.}
+    \resumeItemListEnd
+\resumeSubHeadingListEnd
+%-----------PUBLICATIONS-----------
+\section{Selected Publications}
+\resumeSubHeadingListStart
+  \resumeItem{Author A, \textbf{Your Name}, Author C. ``Paper title.'' \textit{Venue}, Year.}
+  \resumeItem{\textbf{Your Name}, Author B. ``Paper title.'' \textit{Venue}, Year.}
+\resumeSubHeadingListEnd
+%-----------TEACHING-----------
+\section{Teaching Experience}
+\resumeSubHeadingListStart
+  \resumeSubheading
+    {Course Name}{Institution}
+    {Teaching Assistant / Instructor}{Term Year}
+\resumeSubHeadingListEnd
+%-----------TECHNICAL SKILLS-----------
+\section{Skills}
+\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]
+  \small{\item{
+    % PLACEHOLDER_SKILLS_START
+    % Format expected (one category per line, no blank lines between):
+    % \textbf{Methods:} Statistical Modeling, Experimental Design, Qualitative Analysis \\
+    % \textbf{Programming:} Python, R, MATLAB, LaTeX \\
+    % \textbf{Tools:} Git, HPC / SLURM, Jupyter \\
+    % \textbf{Languages:} English (native), Other (fluent)
+    % PLACEHOLDER_SKILLS_END
+  }}
+\end{itemize}
+%-----------PROJECTS-----------
+\section{Selected Projects \& Grants}
+\resumeSubHeadingListStart
+  % PLACEHOLDER_PROJECTS_START
+  % Format expected (repeat block below for each project or grant):
+  %
+  % \resumeProjectHeading
+  %   {\textbf{Project / Grant Title} $|$ \href{URL}{\underline{Link}}}{Mon YYYY -- Mon YYYY}
+  %   \resumeItemListStart
+  %     \resumeItem{Bullet point one.}
+  %   \resumeItemListEnd
+  %
+  % PLACEHOLDER_PROJECTS_END
+\resumeSubHeadingListEnd
+%-------------------------------------------
+\end{document}

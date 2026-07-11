@@ -18,7 +18,7 @@ Paste a job description (or a posting URL). ResumeForge picks your most relevant
 - **Smart, token-aware routing** — sends each task to the right model (Groq writes, Gemini scores ATS), auto-detected from the keys you have; oversized prompts skip to a bigger-context model and trim only as a last resort, so a free Groq key never hits its token cap. ([details](docs/PROVIDERS.md))
 - **Premium-ready** — bring your own GPT / Claude / paid Gemini key (via `.env` or pasted in the UI) and flip `model_tier: premium`.
 - **Strictly one page** — a deterministic condense loop trims to fit, then AI polishes; auto-allows a 2nd page only for 10+ years of experience or an explicit opt-in.
-- **You never write LaTeX** — the AI emits content with `**bold**` markers; Python owns all LaTeX assembly. Vetted one-page templates (`classic`, `modern`).
+- **You never write LaTeX** — the AI emits content with `**bold**` markers; Python owns all LaTeX assembly. Vetted templates for every field: `classic`, `modern`, `cs`, `bio`, and a multi-page `academia` CV — pick one in the UI, via `resume_template` in `config.yaml`, or with `--template`.
 - **Zero-friction onboarding** — build your profile from **GitHub repo URLs** (reads each README) or by **uploading an existing résumé PDF**; or fill simple forms. No hand-authored input files.
 - **One-command setup** — `run.sh` / `run.bat` bootstraps the venv, installs deps, and installs a **minimal TinyTeX** (only the ~14 LaTeX packages used — no 4 GB distro), then launches.
 
@@ -51,7 +51,7 @@ First run creates the venv, installs dependencies, and — if `pdflatex` isn't a
 
 **Docker:** `cp .env.example .env` then `docker compose up --build` → `http://localhost:7860`.
 
-Get a free key in ~1 minute: [Groq](https://console.groq.com) · [Google AI Studio](https://aistudio.google.com/apikey) · [OpenRouter](https://openrouter.ai/keys) · [Cohere](https://dashboard.cohere.com). One key is enough — see **[which key to pick & how routing works](docs/PROVIDERS.md)**.
+Get a free key in ~1 minute: [Groq](https://console.groq.com) · [Google AI Studio](https://aistudio.google.com/apikey) · [OpenRouter](https://openrouter.ai/keys) · [Cohere](https://dashboard.cohere.com). One key is enough. You can also bring **Mistral, DeepSeek, Together, or xAI** keys, or run **fully offline with [Ollama](https://ollama.com)** (no key) — see **[which key to pick & how routing works](docs/PROVIDERS.md)**.
 
 ## CLI (headless)
 
@@ -64,6 +64,7 @@ resumeforge init                              # check LaTeX + provider keys, sca
 resumeforge ui                                # launch the Gradio app (same as python -m app.main)
 
 resumeforge tailor  --jd job.txt              # tailor to a JD (file, URL, or text); --resume <cv.tex> optional
+resumeforge tailor  --jd job.txt --template cs   # choose a template: classic | modern | cs | bio | academia
 resumeforge roast   --resume cv.pdf           # brutally honest [ROAST] → [FIX] feedback (add --jd for fit-scoped)
 resumeforge cold-read --resume cv.pdf --jd job.txt   # zero-context recruiter read
 resumeforge gap --github <user> --resume cv.pdf --jd job.txt   # what your résumé misses vs your GitHub

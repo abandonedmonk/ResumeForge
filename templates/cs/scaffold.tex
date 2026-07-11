@@ -1,0 +1,137 @@
+%-------------------------
+% ResumeForge — "CS" RENDER SCAFFOLD
+% Machine-filled by app/parsers/profile_template_builder.py from a user's profile.
+% The % PLACEHOLDER_*_START/END regions are replaced with rendered content; the
+% preamble, macros, SKILLS/PROJECTS placeholders, and the summary line are kept
+% byte-identical to template.tex so the per-run pipeline still injects into them.
+% This file also compiles standalone (with the placeholder data below).
+%-------------------------
+\documentclass[letterpaper,10pt]{article}
+\usepackage{anyfontsize}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{soul}
+\geometry{
+  top=0.5in,
+  bottom=0.5in,
+  left=0.6in,
+  right=0.6in
+}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+\urlstyle{same}
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+% Section formatting
+\titleformat{\section}{
+  \vspace{-1pt}\scshape\bfseries\raggedright\large
+}{}{0em}{\MakeUppercase}[\color{black}\titlerule \vspace{0pt}]
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item{\small\setlength{\baselineskip}{10pt} #1 \vspace{-2pt}}
+}
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{\textwidth}[t]{@{}p{0.75\textwidth}@{\extracolsep{\fill}}r@{}}
+      \textbf{#1} & \small #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{\textwidth}{@{}l@{\extracolsep{\fill}}r@{}}
+      \small#1 & \small\textit{#2} \\
+    \end{tabular*}\vspace{-4pt}
+}
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}[leftmargin=0.15in, label={$\bullet$}, topsep=0pt, partopsep=0pt, itemsep=3pt, parsep=0pt]}
+\newcommand{\resumeItemListEnd}{\end{itemize}}
+%-------------------------------------------
+\begin{document}
+\fontsize{10.5}{11}\selectfont
+%----------HEADING----------
+\begin{center}
+% PLACEHOLDER_HEADER_START
+    {\Huge \scshape \textbf{Your Name}} \\ \vspace{4pt}
+    \href{mailto:you@example.com}{\ul{you@example.com}} $|$
+    \href{https://www.linkedin.com/in/your-handle/}{\ul{LinkedIn}} $|$
+    \href{https://github.com/your-handle}{\ul{GitHub}} $|$
+    +1 555 555 5555
+% PLACEHOLDER_HEADER_END
+    \\ \vspace{6pt}
+    {Professional summary goes here — ResumeForge replaces this line with a JD-tailored headline.}
+\end{center}
+%-----------EDUCATION-----------
+\section{Education}
+\resumeSubHeadingListStart
+% PLACEHOLDER_EDUCATION_START
+  \resumeSubheading
+    {Your University, City}{GPA: X.XX}
+    {B.S. in Computer Science}{\textit{Expected Graduation: Month Year}}  \vspace{-9pt}
+  \item \small{\textbf{Relevant Coursework:} Data Structures, Algorithms, Operating Systems, Databases}
+% PLACEHOLDER_EDUCATION_END
+\resumeSubHeadingListEnd
+%-----------TECHNICAL SKILLS-----------
+\section{Technical Skills}
+\begin{itemize}[leftmargin=0in, label={}, topsep=0pt, partopsep=0pt]
+  \small{\item{
+    % PLACEHOLDER_SKILLS_START
+    % Format expected (one category per line, no blank lines between):
+    % \textbf{Languages:} Python, C++, Java \\
+    % PLACEHOLDER_SKILLS_END
+  }}
+\end{itemize}
+%-----------EXPERIENCE-----------
+\section{Experience}
+\resumeSubHeadingListStart
+% PLACEHOLDER_EXPERIENCE_START
+  \resumeSubheading
+    {Company Name}{Location}
+    {Software Engineer Intern}{Month Year -- Month Year}
+    \resumeItemListStart
+      \resumeItem{Built a feature with impact, method, and a metric.}
+      \resumeItem{Describe a second achievement; ResumeForge will tailor these bullets to the JD.}
+    \resumeItemListEnd
+% PLACEHOLDER_EXPERIENCE_END
+\resumeSubHeadingListEnd
+%-----------PROJECTS-----------
+\section{Projects}
+\resumeSubHeadingListStart
+  % PLACEHOLDER_PROJECTS_START
+  % Format expected (repeat block below for each project):
+  %
+  % \resumeProjectHeading
+  %   {\textbf{Project Title} $|$ \href{URL}{\underline{Project Link}}}{Mon YYYY -- Mon YYYY}
+  %   \resumeItemListStart
+  %     \resumeItem{Bullet point one.}
+  %   \resumeItemListEnd
+  %
+  % PLACEHOLDER_PROJECTS_END
+\resumeSubHeadingListEnd
+%-----------CERTIFICATIONS-----------
+\section{Certifications}
+\begin{itemize}[leftmargin=0in, label={}, itemsep=0pt, parsep=0pt, topsep=0pt, partopsep=0pt]
+  \small{
+% PLACEHOLDER_CERTIFICATIONS_START
+    \item Certificate Name --- Issuer $|$ \href{https://example.com}{\underline{Certificate Link}}
+% PLACEHOLDER_CERTIFICATIONS_END
+  }
+\end{itemize}
+%-------------------------------------------
+\end{document}

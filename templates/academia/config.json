@@ -1,0 +1,9 @@
+{
+  "name": "academia",
+  "description": "Academic CV — research interests, publications, teaching, and grants. Multi-page by design.",
+  "compiler": "pdflatex",
+  "max_projects": 4,
+  "max_skills": 5,
+  "max_bullets_per_project": 4,
+  "allow_two_pages": true
+}

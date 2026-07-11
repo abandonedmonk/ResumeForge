@@ -33,6 +33,13 @@ MODEL_LIMITS: dict[str, dict[str, int]] = {
     "gpt-4o": {"max_input_tokens": 120000, "max_output_tokens": 4096},
     # --- Premium (generous) ---
     "claude-sonnet-4-6": {"max_input_tokens": 180000, "max_output_tokens": 4096},
+    # --- Additional OpenAI-compatible providers (bring-your-own key; generous) ---
+    "mistral-large-latest": {"max_input_tokens": 120000, "max_output_tokens": 4096},
+    "deepseek-chat": {"max_input_tokens": 60000, "max_output_tokens": 4096},
+    "meta-llama/Llama-3.3-70B-Instruct-Turbo": {"max_input_tokens": 120000, "max_output_tokens": 4096},
+    "grok-2-latest": {"max_input_tokens": 120000, "max_output_tokens": 4096},
+    # --- Local Ollama (conservative; small models on consumer hardware) ---
+    "llama3.1": {"max_input_tokens": 8000, "max_output_tokens": 2048},
 }
 
 # Used when a model string isn't in the registry (e.g. a custom model the user set).
@@ -49,6 +56,11 @@ _PROVIDER_MODEL_KEYS: dict[str, tuple[str, str]] = {
     "copilot": ("copilot_model", "gpt-4o"),
     "openai": ("openai_model", "gpt-4o"),
     "anthropic": ("anthropic_model", "claude-sonnet-4-6"),
+    "mistral": ("mistral_model", "mistral-large-latest"),
+    "deepseek": ("deepseek_model", "deepseek-chat"),
+    "together": ("together_model", "meta-llama/Llama-3.3-70B-Instruct-Turbo"),
+    "xai": ("xai_model", "grok-2-latest"),
+    "ollama": ("ollama_model", "llama3.1"),
 }
 
 
