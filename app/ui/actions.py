@@ -28,6 +28,7 @@ from app.ui.render import (
     _ats_analysis_markdown,
     _before_after_html,
     _build_run_log_content,
+    _changes_diff_html,
     _dump_yaml,
     _parse_profiles_preview,
     _render_profiles_preview,
@@ -122,6 +123,7 @@ def _run_resumeforge_inner(output_folder: str, jd_text_override: str = ""):
         final_state,
         final_state.get("cover_letter_md", "") or "_Cover letter not enabled for this run._",
         _safe_file_output(final_state.get("final_docx_path")),
+        _changes_diff_html(final_state.get("changes_log", [])),
     )
 
 

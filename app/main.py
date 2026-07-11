@@ -131,6 +131,8 @@ def build_ui() -> gr.Blocks:
                                 ats_analysis = gr.Markdown()
                             with gr.Tab("Changes Made"):
                                 changes_md = gr.Markdown()
+                            with gr.Tab("Diff"):
+                                diff_html = gr.HTML()
                             with gr.Tab("LaTeX Preview"):
                                 latex_preview = gr.Code(language="latex", lines=24)
                                 edit_request = gr.Textbox(
@@ -289,7 +291,7 @@ def build_ui() -> gr.Blocks:
         run_button.click(
             fn=_run_resumeforge,
             inputs=[output_folder, stage1_model, stage2_model, enrich_toggle, jd_text_input, model_tier, openai_key, anthropic_key, cover_letter_toggle, resume_template],
-            outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store, cover_letter_md, docx_file],
+            outputs=[ats_badge, ats_delta, ats_analysis, changes_md, latex_preview, pdf_file, status_box, error_box, log_preview, state_store, cover_letter_md, docx_file, diff_html],
         )
         apply_edit_button.click(
             fn=_apply_ai_edit_request,

@@ -4,6 +4,8 @@ formatters with no pipeline side effects. Imported by ``app.ui.actions`` and
 """
 from __future__ import annotations
 
+import difflib
+import html
 import re
 from datetime import datetime
 from pathlib import Path
@@ -58,6 +60,63 @@ def _before_after_html(original_score: dict, final_score: dict) -> str:
         f"font-weight:600;text-align:center'>ATS {before}% {arrow} {after}% "
         f"<span style='opacity:.7;font-weight:400'>(before → after optimization)</span></div>"
     )
+
+
+_DEL_STYLE = "background:#fee2e2;color:#991b1b;border-radius:3px;padding:0 2px"
+_INS_STYLE = "background:#d1fae5;color:#065f46;border-radius:3px;padding:0 2px;text-decoration:none"
+
+
+def _diff_bullet_html(old: str, new: str) -> str:
+    """Word-level inline diff of one bullet: removed words red, added words green."""
+    old_words = old.split()
+    new_words = new.split()
+    matcher = difflib.SequenceMatcher(None, old_words, new_words, autojunk=False)
+    parts: list[str] = []
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op == "equal":
+            parts.append(html.escape(" ".join(new_words[j1:j2])))
+            continue
+        if op in ("delete", "replace"):
+            parts.append(f"<del style='{_DEL_STYLE}'>{html.escape(' '.join(old_words[i1:i2]))}</del>")
+        if op in ("insert", "replace"):
+            parts.append(f"<ins style='{_INS_STYLE}'>{html.escape(' '.join(new_words[j1:j2]))}</ins>")
+    return " ".join(part for part in parts if part)
+
+
+def _changes_diff_html(changes_log: list[dict]) -> str:
+    """Per-section green/red diff of the tailored bullets, built from ``changes_log``.
+
+    Each entry is ``{section, old_bullets, new_bullets, reasoning}`` (see
+    ``tailor_section``); old/new lists are the same length. Bullets left untouched
+    (e.g. reverted by validation) render plain.
+    """
+    if not changes_log:
+        return "<p style='color:#64748b'>No changes to diff yet — run a tailor first.</p>"
+    legend = (
+        "<div style='margin-bottom:10px;font-size:13px;color:#475569'>"
+        f"<span style='{_DEL_STYLE}'>removed</span>&nbsp;&nbsp;"
+        f"<span style='{_INS_STYLE}'>added</span></div>"
+    )
+    blocks: list[str] = [legend]
+    for change in changes_log:
+        section = html.escape(str(change.get("section", "Section")))
+        old_bullets = change.get("old_bullets", []) or []
+        new_bullets = change.get("new_bullets", []) or []
+        rows: list[str] = []
+        for old, new in zip(old_bullets, new_bullets, strict=False):
+            body = html.escape(new) if old == new else _diff_bullet_html(old, new)
+            rows.append(f"<li style='margin:4px 0;line-height:1.5'>{body}</li>")
+        if not rows:
+            continue
+        reasoning = html.escape(str(change.get("reasoning", "")))
+        blocks.append(
+            f"<div style='margin-bottom:16px'>"
+            f"<h4 style='margin:0 0 4px'>{section}</h4>"
+            f"<ul style='margin:0;padding-left:18px'>{''.join(rows)}</ul>"
+            + (f"<div style='font-size:12px;color:#64748b;margin-top:4px'>{reasoning}</div>" if reasoning else "")
+            + "</div>"
+        )
+    return "<div style='font-size:14px'>" + "".join(blocks) + "</div>"
 
 
 def _ats_analysis_markdown(score_data: dict, skills_gap: dict) -> str:
